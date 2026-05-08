@@ -6,14 +6,14 @@ export type Student = {
 };
 
 export const STUDENTS: Student[] = [
-  { id: "s1", name: "Ahmad Fauzan", className: "TK B1", parentWa: "6281234567890" },
-  { id: "s2", name: "Aisyah Putri", className: "TK B1", parentWa: "6281234567891" },
-  { id: "s3", name: "Bima Pratama", className: "TK B1", parentWa: "6281234567892" },
-  { id: "s4", name: "Citra Lestari", className: "TK B1", parentWa: "6281234567893" },
-  { id: "s5", name: "Daffa Hakim", className: "TK A2", parentWa: "6281234567894" },
-  { id: "s6", name: "Elsa Maharani", className: "TK A2", parentWa: "6281234567895" },
-  { id: "s7", name: "Fariz Ramadhan", className: "TK A2", parentWa: "6281234567896" },
-  { id: "s8", name: "Gita Anindya", className: "TK A2", parentWa: "6281234567897" },
+  { id: "s1", name: "Ahmad Fauzan", className: "TK B1", parentWa: "6282142124899" },
+  { id: "s2", name: "Aisyah Putri", className: "TK B1", parentWa: "6282142124899" },
+  { id: "s3", name: "Bima Pratama", className: "TK B1", parentWa: "6282142124899" },
+  { id: "s4", name: "Citra Lestari", className: "TK B1", parentWa: "6282142124899" },
+  { id: "s5", name: "Daffa Hakim", className: "TK A2", parentWa: "6282142124899" },
+  { id: "s6", name: "Elsa Maharani", className: "TK A2", parentWa: "6282142124899" },
+  { id: "s7", name: "Fariz Ramadhan", className: "TK A2", parentWa: "6282142124899" },
+  { id: "s8", name: "Gita Anindya", className: "TK A2", parentWa: "6282142124899" },
 ];
 
 export type IndicatorKey = "agama" | "fisik" | "kognitif" | "sosial";
