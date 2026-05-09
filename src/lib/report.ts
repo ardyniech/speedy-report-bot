@@ -8,12 +8,15 @@ import {
   type Scores,
   type Student,
 } from "./students";
+import type { SchoolSettings } from "./school";
 
-export function buildWaMessage(student: Student, scores: Scores) {
+export { scoreToCategory };
+
+export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings) {
   const date = formatDateID(new Date());
   const lines: string[] = [
     `*Laporan Penilaian Harian*`,
-    `TK Ceria Bunda`,
+    school.name,
     ``,
     `Nama   : ${student.name}`,
     `Kelas  : ${student.className}`,
@@ -26,21 +29,21 @@ export function buildWaMessage(student: Student, scores: Scores) {
     lines.push(`• ${el.short} — dominan ${sum.dominant.code} (${sum.dominant.label})`);
   });
   lines.push("", "Detail lengkap 60 indikator terlampir pada PDF. 📄", "");
-  lines.push("Terima kasih atas kerja sama Ayah/Bunda. 🌸", "_— Bu Guru_");
+  lines.push("Terima kasih atas kerja sama Ayah/Bunda. 🌸", `_— ${school.teacherName}_`);
   return lines.join("\n");
 }
 
-export function buildWaLink(student: Student, scores: Scores) {
-  const text = encodeURIComponent(buildWaMessage(student, scores));
+export function buildWaLink(student: Student, scores: Scores, school: SchoolSettings) {
+  const text = encodeURIComponent(buildWaMessage(student, scores, school));
   return `https://wa.me/${student.parentWa}?text=${text}`;
 }
 
-export function generatePdf(student: Student, scores: Scores) {
+export function generatePdf(student: Student, scores: Scores, school: SchoolSettings) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const M = 40;
-  let y = 50;
+  let y = 40;
 
   const ensureSpace = (need: number) => {
     if (y + need > H - 50) {
@@ -49,25 +52,44 @@ export function generatePdf(student: Student, scores: Scores) {
     }
   };
 
-  // Header
+  // === HEADER / KOP ===
+  const logoSize = 56;
+  if (school.logoDataUrl) {
+    try {
+      const fmt = school.logoDataUrl.startsWith("data:image/png") ? "PNG" : "JPEG";
+      doc.addImage(school.logoDataUrl, fmt, M, y, logoSize, logoSize);
+    } catch {
+      // ignore bad image
+    }
+  }
+  const textX = school.logoDataUrl ? M + logoSize + 14 : W / 2;
+  const align = school.logoDataUrl ? "left" : "center";
+
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(16);
-  doc.text("TK CERIA BUNDA", W / 2, y, { align: "center" });
-  y += 16;
-  doc.setFontSize(9);
+  doc.setFontSize(15);
+  doc.text(school.name.toUpperCase(), textX, y + 16, { align });
   doc.setFont("helvetica", "normal");
-  doc.text("Jl. Pendidikan No. 1 — Telp. (021) 555-0100", W / 2, y, { align: "center" });
-  y += 12;
-  doc.setLineWidth(1);
+  doc.setFontSize(9);
+  doc.text(school.address, textX, y + 30, { align });
+  if (school.phone) doc.text(`Telp. ${school.phone}`, textX, y + 42, { align });
+
+  y += logoSize + 8;
+  doc.setLineWidth(1.5);
   doc.line(M, y, W - M, y);
+  doc.setLineWidth(0.5);
+  doc.line(M, y + 3, W - M, y + 3);
   y += 22;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  doc.text("LAPORAN PENILAIAN HARIAN — KURIKULUM MERDEKA PAUD", W / 2, y, { align: "center" });
-  y += 22;
+  doc.text("LAPORAN PENILAIAN HARIAN", W / 2, y, { align: "center" });
+  y += 14;
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "italic");
+  doc.text("Kurikulum Merdeka PAUD", W / 2, y, { align: "center" });
+  y += 20;
 
-  // Info
+  // === INFO SISWA ===
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
   const info: [string, string][] = [
@@ -82,13 +104,12 @@ export function generatePdf(student: Student, scores: Scores) {
   });
   y += 6;
 
-  // Legend
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
   doc.text("Skala: 1=BB (Belum Berkembang)  2=MB (Mulai Berkembang)  3=BSH (Sesuai Harapan)  4=BSB (Sangat Baik)", M, y);
   y += 14;
 
-  // For each element
+  // === ELEMENTS ===
   ELEMENTS.forEach((el) => {
     ensureSpace(50);
     const sum = summarizeElement(el, scores);
@@ -100,7 +121,6 @@ export function generatePdf(student: Student, scores: Scores) {
     doc.text(`Dominan: ${sum.dominant.code}`, W - M - 8, y + 15, { align: "right" });
     y += 26;
 
-    // Table header
     doc.setFontSize(8.5);
     doc.setFillColor(240, 240, 240);
     doc.rect(M, y, W - 2 * M, 16, "F");
@@ -127,7 +147,7 @@ export function generatePdf(student: Student, scores: Scores) {
     y += 10;
   });
 
-  // Narrative summary
+  // === CATATAN ===
   ensureSpace(80);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
@@ -144,12 +164,31 @@ export function generatePdf(student: Student, scores: Scores) {
     y += lines.length * 12 + 4;
   });
 
-  ensureSpace(80);
-  y += 20;
-  doc.text("Hormat kami,", W - 180, y);
-  y += 50;
+  // === TANDA TANGAN (dua kolom) ===
+  ensureSpace(120);
+  y += 18;
+  doc.setFontSize(10);
+  doc.setFont("helvetica", "normal");
+  const placeDate = `${school.city}, ${formatDateID(new Date())}`;
+  doc.text(placeDate, W - M, y, { align: "right" });
+  y += 18;
+
+  const colW = (W - 2 * M) / 2;
+  const leftX = M + colW / 2;
+  const rightX = W - M - colW / 2;
+  const sigTop = y;
+
+  doc.text("Mengetahui,", leftX, sigTop, { align: "center" });
+  doc.text("Guru Kelas,", rightX, sigTop, { align: "center" });
+  doc.text("Kepala Sekolah", leftX, sigTop + 12, { align: "center" });
+
+  const nameY = sigTop + 70;
   doc.setFont("helvetica", "bold");
-  doc.text("Guru Kelas", W - 180, y);
+  doc.text(school.principalName, leftX, nameY, { align: "center" });
+  doc.text(school.teacherName, rightX, nameY, { align: "center" });
+  doc.setLineWidth(0.5);
+  doc.line(leftX - 70, nameY + 3, leftX + 70, nameY + 3);
+  doc.line(rightX - 70, nameY + 3, rightX + 70, nameY + 3);
 
   doc.save(`Laporan-${student.name.replace(/\s+/g, "_")}.pdf`);
 }

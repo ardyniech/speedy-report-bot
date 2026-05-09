@@ -10,6 +10,7 @@ import {
   type ElementKey,
 } from "@/lib/students";
 import { buildWaLink, generatePdf } from "@/lib/report";
+import { useSchool } from "@/lib/school";
 import { toast } from "sonner";
 import { ArrowLeft, FileDown, Send, ChevronDown } from "lucide-react";
 
@@ -24,6 +25,7 @@ export function AssessmentForm({
   onBack: () => void;
   onDone: (s: Student) => void;
 }) {
+  const school = useSchool();
   const [scores, setScores] = useState<Scores>(() => buildDefaultScores());
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
 
@@ -39,8 +41,8 @@ export function AssessmentForm({
   };
 
   const handleSubmit = () => {
-    generatePdf(student, scores);
-    const link = buildWaLink(student, scores);
+    generatePdf(student, scores, school);
+    const link = buildWaLink(student, scores, school);
     window.open(link, "_blank");
     toast.success("PDF terunduh & WhatsApp dibuka", {
       description: "Lampirkan PDF di chat WA orang tua.",
@@ -176,7 +178,7 @@ export function AssessmentForm({
           </button>
           <button
             onClick={() => {
-              generatePdf(student, scores);
+              generatePdf(student, scores, school);
               toast.success("PDF terunduh");
             }}
             className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-4 font-semibold text-secondary-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
