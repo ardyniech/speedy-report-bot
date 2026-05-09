@@ -166,13 +166,25 @@ export function AssessmentForm({
           })}
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98]"
-        >
-          <Send className="h-5 w-5" />
-          Simpan & Kirim WA
-        </button>
+        <div className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <button
+            onClick={handleSubmit}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98]"
+          >
+            <Send className="h-5 w-5" />
+            Simpan & Kirim WA
+          </button>
+          <button
+            onClick={() => {
+              generatePdf(student, scores);
+              toast.success("PDF terunduh");
+            }}
+            className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-4 font-semibold text-secondary-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
+          >
+            <FileDown className="h-5 w-5" />
+            Download PDF
+          </button>
+        </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
           <FileDown className="h-3 w-3" /> PDF otomatis terunduh, WA siap dengan pesan terisi
         </p>
