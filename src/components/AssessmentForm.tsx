@@ -178,7 +178,7 @@ export function AssessmentForm({
           </button>
           <button
             onClick={() => {
-              generatePdf(student, scores);
+              generatePdf(student, scores, school);
               toast.success("PDF terunduh");
             }}
             className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-4 font-semibold text-secondary-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
