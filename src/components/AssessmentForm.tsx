@@ -178,13 +178,13 @@ export function AssessmentForm({
           })}
         </div>
 
-        <div className="mt-6 grid gap-2 sm:grid-cols-[1fr_auto]">
+        <div className="mt-6 grid gap-2 sm:grid-cols-3">
           <button
-            onClick={handleSubmit}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98]"
+            onClick={openPreview}
+            className="flex items-center justify-center gap-2 rounded-xl bg-card px-5 py-4 font-semibold text-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
           >
-            <Send className="h-5 w-5" />
-            Simpan & Kirim WA
+            <Eye className="h-5 w-5" />
+            Preview PDF
           </button>
           <button
             onClick={() => {
@@ -194,13 +194,58 @@ export function AssessmentForm({
             className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-4 font-semibold text-secondary-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
           >
             <FileDown className="h-5 w-5" />
-            Download PDF
+            Download
+          </button>
+          <button
+            onClick={handleSubmit}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98]"
+          >
+            <Send className="h-5 w-5" />
+            Kirim WA
           </button>
         </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <FileDown className="h-3 w-3" /> PDF otomatis terunduh, WA siap dengan pesan terisi
+          <Eye className="h-3 w-3" /> Cek dulu lewat Preview, lalu unduh atau kirim ke WA
         </p>
       </div>
+
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/70" onClick={closePreview}>
+          <div
+            className="flex items-center justify-between gap-2 bg-card px-4 py-3 ring-1 ring-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold text-foreground">Preview Laporan</div>
+              <div className="truncate text-xs text-muted-foreground">{pdfFileName(student)}</div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button
+                onClick={() => {
+                  generatePdf(student, scores, school);
+                  toast.success("PDF terunduh");
+                }}
+                className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+              >
+                <FileDown className="h-3.5 w-3.5" /> Download
+              </button>
+              <button
+                onClick={closePreview}
+                className="grid h-8 w-8 place-items-center rounded-md bg-muted hover:bg-muted/70"
+                aria-label="Tutup preview"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+          <iframe
+            src={previewUrl}
+            title="Preview PDF"
+            className="flex-1 w-full bg-white"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
