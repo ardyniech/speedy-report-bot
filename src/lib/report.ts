@@ -38,7 +38,7 @@ export function buildWaLink(student: Student, scores: Scores, school: SchoolSett
   return `https://wa.me/${student.parentWa}?text=${text}`;
 }
 
-export function generatePdf(student: Student, scores: Scores, school: SchoolSettings) {
+function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
@@ -190,5 +190,20 @@ export function generatePdf(student: Student, scores: Scores, school: SchoolSett
   doc.line(leftX - 70, nameY + 3, leftX + 70, nameY + 3);
   doc.line(rightX - 70, nameY + 3, rightX + 70, nameY + 3);
 
-  doc.save(`Laporan-${student.name.replace(/\s+/g, "_")}.pdf`);
+  return doc;
+}
+
+export function pdfFileName(student: Student) {
+  return `Laporan-${student.name.replace(/\s+/g, "_")}.pdf`;
+}
+
+export function generatePdf(student: Student, scores: Scores, school: SchoolSettings) {
+  const doc = buildPdf(student, scores, school);
+  doc.save(pdfFileName(student));
+}
+
+export function previewPdfUrl(student: Student, scores: Scores, school: SchoolSettings) {
+  const doc = buildPdf(student, scores, school);
+  const blob = doc.output("blob");
+  return URL.createObjectURL(blob);
 }
