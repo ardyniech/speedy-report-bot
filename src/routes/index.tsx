@@ -2,6 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { STUDENTS, formatDateID, type Student } from "@/lib/students";
 import { AssessmentForm } from "@/components/AssessmentForm";
+import { SchoolSettingsDialog } from "@/components/SchoolSettingsDialog";
+import { useSchool } from "@/lib/school";
 import { Toaster } from "@/components/ui/sonner";
 import { Sparkles, Check, ChevronRight, GraduationCap } from "lucide-react";
 
@@ -19,6 +21,7 @@ function Index() {
   const [active, setActive] = useState<Student | null>(null);
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [classFilter, setClassFilter] = useState<string>("all");
+  const school = useSchool();
 
   const classes = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.className))), []);
   const filtered = classFilter === "all" ? STUDENTS : STUDENTS.filter((s) => s.className === classFilter);
@@ -31,16 +34,23 @@ function Index() {
       <header className="border-b border-border bg-card/60 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
-              <GraduationCap className="h-5 w-5" />
+            <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground">
+              {school.logoDataUrl ? (
+                <img src={school.logoDataUrl} alt="Logo" className="h-full w-full object-contain" />
+              ) : (
+                <GraduationCap className="h-5 w-5" />
+              )}
             </div>
-            <div>
-              <h1 className="font-display text-lg font-bold leading-tight">TK Ceria Bunda</h1>
+            <div className="min-w-0">
+              <h1 className="truncate font-display text-lg font-bold leading-tight">{school.name}</h1>
               <p className="text-xs text-muted-foreground">Penilaian Harian</p>
             </div>
           </div>
-          <div className="hidden text-right text-xs text-muted-foreground sm:block">
-            {formatDateID(new Date())}
+          <div className="flex items-center gap-2">
+            <span className="hidden text-right text-xs text-muted-foreground sm:block">
+              {formatDateID(new Date())}
+            </span>
+            <SchoolSettingsDialog />
           </div>
         </div>
       </header>
