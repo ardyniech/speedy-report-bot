@@ -9,10 +9,10 @@ import {
   type Student,
   type ElementKey,
 } from "@/lib/students";
-import { buildWaLink, generatePdf } from "@/lib/report";
+import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/report";
 import { useSchool } from "@/lib/school";
 import { toast } from "sonner";
-import { ArrowLeft, FileDown, Send, ChevronDown } from "lucide-react";
+import { ArrowLeft, FileDown, Send, ChevronDown, Eye, X } from "lucide-react";
 
 const SCORE_OPTIONS: Score[] = [1, 2, 3, 4];
 
@@ -28,6 +28,16 @@ export function AssessmentForm({
   const school = useSchool();
   const [scores, setScores] = useState<Scores>(() => buildDefaultScores());
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const openPreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(previewPdfUrl(student, scores, school));
+  };
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  };
 
   const setScore = (id: string, val: Score) =>
     setScores((s) => ({ ...s, [id]: val }));
