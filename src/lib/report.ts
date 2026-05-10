@@ -175,7 +175,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
   y += 18;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const placeDate = `${school.city}, ${formatDateID(new Date())}`;
+  const placeDate = `${school.city}, ${formatReportDate(reportDate)}`;
   doc.text(placeDate, W - M, y, { align: "right" });
   y += 18;
 
