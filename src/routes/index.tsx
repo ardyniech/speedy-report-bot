@@ -164,7 +164,7 @@ function Index() {
                       <div>
                         <div className="font-semibold text-foreground">{s.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {s.className} {done && "• Selesai"}
+                          {s.className} · {s.day} {done && "• Selesai"}
                         </div>
                       </div>
                     </div>
