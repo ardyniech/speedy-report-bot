@@ -101,7 +101,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
   const info: [string, string][] = [
     ["Nama Siswa", student.name],
     ["Kelas", student.className],
-    ["Tanggal", formatDateID(new Date())],
+    ["Tanggal", formatReportDate(reportDate)],
   ];
   info.forEach(([k, v]) => {
     doc.text(k, M + 5, y);
