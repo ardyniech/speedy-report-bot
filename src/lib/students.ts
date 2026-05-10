@@ -1,19 +1,31 @@
+export type WeekDay = "Senin" | "Selasa" | "Rabu" | "Kamis" | "Jumat";
+export const WEEK_DAYS: WeekDay[] = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat"];
+
+export function todayWeekDay(d: Date = new Date()): WeekDay | null {
+  // 1=Mon ... 5=Fri
+  const idx = d.getDay();
+  if (idx >= 1 && idx <= 5) return WEEK_DAYS[idx - 1];
+  return null;
+}
+
 export type Student = {
   id: string;
   name: string;
   className: string;
   parentWa: string;
+  /** Hari jadwal penilaian rutin (Senin–Jumat). */
+  day: WeekDay;
 };
 
 export const STUDENTS: Student[] = [
-  { id: "s1", name: "Ahmad Fauzan", className: "TK B1", parentWa: "6282142124899" },
-  { id: "s2", name: "Aisyah Putri", className: "TK B1", parentWa: "6282142124899" },
-  { id: "s3", name: "Bima Pratama", className: "TK B1", parentWa: "6282142124899" },
-  { id: "s4", name: "Citra Lestari", className: "TK B1", parentWa: "6282142124899" },
-  { id: "s5", name: "Daffa Hakim", className: "TK A2", parentWa: "6282142124899" },
-  { id: "s6", name: "Elsa Maharani", className: "TK A2", parentWa: "6282142124899" },
-  { id: "s7", name: "Fariz Ramadhan", className: "TK A2", parentWa: "6282142124899" },
-  { id: "s8", name: "Gita Anindya", className: "TK A2", parentWa: "6282142124899" },
+  { id: "s1", name: "Ahmad Fauzan", className: "TK B1", parentWa: "6282142124899", day: "Senin" },
+  { id: "s2", name: "Aisyah Putri", className: "TK B1", parentWa: "6282142124899", day: "Senin" },
+  { id: "s3", name: "Bima Pratama", className: "TK B1", parentWa: "6282142124899", day: "Selasa" },
+  { id: "s4", name: "Citra Lestari", className: "TK B1", parentWa: "6282142124899", day: "Rabu" },
+  { id: "s5", name: "Daffa Hakim", className: "TK A2", parentWa: "6282142124899", day: "Rabu" },
+  { id: "s6", name: "Elsa Maharani", className: "TK A2", parentWa: "6282142124899", day: "Kamis" },
+  { id: "s7", name: "Fariz Ramadhan", className: "TK A2", parentWa: "6282142124899", day: "Kamis" },
+  { id: "s8", name: "Gita Anindya", className: "TK A2", parentWa: "6282142124899", day: "Jumat" },
 ];
 
 export type ElementKey = "agama" | "jatiDiri" | "literasi";
@@ -171,3 +183,30 @@ export function summarizeElement(el: Element, scores: Scores) {
 export function formatDateID(d: Date) {
   return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
+
+export function todayISO(d: Date = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function parseISODate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+export function formatISODateID(iso: string) {
+  return formatDateID(parseISODate(iso));
+}
+
+export function isScoresComplete(scores: Scores): boolean {
+  for (const el of ELEMENTS) {
+    for (const ind of el.indicators) {
+      const v = scores[ind.id];
+      if (v !== 1 && v !== 2 && v !== 3 && v !== 4) return false;
+    }
+  }
+  return true;
+}
+

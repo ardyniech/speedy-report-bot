@@ -5,6 +5,8 @@ import {
   scoreToCategory,
   summarizeElement,
   formatDateID,
+  formatISODateID,
+  parseISODate,
   type Scores,
   type Student,
 } from "./students";
@@ -12,8 +14,12 @@ import type { SchoolSettings } from "./school";
 
 export { scoreToCategory };
 
-export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings) {
-  const date = formatDateID(new Date());
+function formatReportDate(reportDate?: string) {
+  return reportDate ? formatISODateID(reportDate) : formatDateID(new Date());
+}
+
+export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const date = formatReportDate(reportDate);
   const lines: string[] = [
     `*Laporan Penilaian Harian*`,
     school.name,
@@ -33,12 +39,12 @@ export function buildWaMessage(student: Student, scores: Scores, school: SchoolS
   return lines.join("\n");
 }
 
-export function buildWaLink(student: Student, scores: Scores, school: SchoolSettings) {
-  const text = encodeURIComponent(buildWaMessage(student, scores, school));
+export function buildWaLink(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const text = encodeURIComponent(buildWaMessage(student, scores, school, reportDate));
   return `https://wa.me/${student.parentWa}?text=${text}`;
 }
 
-function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
+function buildPdf(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
@@ -95,7 +101,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
   const info: [string, string][] = [
     ["Nama Siswa", student.name],
     ["Kelas", student.className],
-    ["Tanggal", formatDateID(new Date())],
+    ["Tanggal", formatReportDate(reportDate)],
   ];
   info.forEach(([k, v]) => {
     doc.text(k, M + 5, y);
@@ -169,7 +175,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
   y += 18;
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
-  const placeDate = `${school.city}, ${formatDateID(new Date())}`;
+  const placeDate = `${school.city}, ${formatReportDate(reportDate)}`;
   doc.text(placeDate, W - M, y, { align: "right" });
   y += 18;
 
@@ -193,17 +199,24 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
   return doc;
 }
 
-export function pdfFileName(student: Student) {
-  return `Laporan-${student.name.replace(/\s+/g, "_")}.pdf`;
+export function pdfFileName(student: Student, reportDate?: string) {
+  const datePart = reportDate ?? "";
+  const base = `Laporan-${student.name.replace(/\s+/g, "_")}`;
+  return datePart ? `${base}-${datePart}.pdf` : `${base}.pdf`;
 }
 
-export function generatePdf(student: Student, scores: Scores, school: SchoolSettings) {
-  const doc = buildPdf(student, scores, school);
-  doc.save(pdfFileName(student));
+export function generatePdf(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const doc = buildPdf(student, scores, school, reportDate);
+  doc.save(pdfFileName(student, reportDate));
 }
 
-export function previewPdfUrl(student: Student, scores: Scores, school: SchoolSettings) {
-  const doc = buildPdf(student, scores, school);
+export function previewPdfUrl(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const doc = buildPdf(student, scores, school, reportDate);
   const blob = doc.output("blob");
   return URL.createObjectURL(blob);
 }
+
+// Hindari unused-import warning bila helper di atas tidak terpakai pada beberapa build.
+void formatDateID;
+void parseISODate;
+

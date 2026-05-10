@@ -5,6 +5,9 @@ import {
   buildDefaultScores,
   summarizeElement,
   formatDateID,
+  formatISODateID,
+  isScoresComplete,
+  todayISO,
   type Score,
   type Scores,
   type Student,
@@ -31,6 +34,9 @@ import {
   Save,
   History,
   Trash2,
+  Calendar as CalendarIcon,
+  Search,
+  AlertCircle,
 } from "lucide-react";
 
 const SCORE_OPTIONS: Score[] = [1, 2, 3, 4];
@@ -48,6 +54,7 @@ export function AssessmentForm({
   const [scores, setScores] = useState<Scores>(
     () => loadDraft(student.id) ?? buildDefaultScores(),
   );
+  const [reportDate, setReportDate] = useState<string>(() => todayISO());
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
@@ -66,9 +73,9 @@ export function AssessmentForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id]);
 
-  const openPreview = (s: Scores = scores) => {
+  const openPreview = (s: Scores = scores, d: string = reportDate) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(previewPdfUrl(student, s, school));
+    setPreviewUrl(previewPdfUrl(student, s, school, d));
   };
   const closePreview = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -86,20 +93,34 @@ export function AssessmentForm({
     });
   };
 
+  const complete = useMemo(() => isScoresComplete(scores), [scores]);
+
+  const guardComplete = (): boolean => {
+    if (!complete) {
+      toast.error("Belum lengkap", {
+        description: "Setiap indikator wajib bernilai 1–4 sebelum disimpan atau dikirim.",
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleSaveOnly = () => {
-    addReport(scores);
+    if (!guardComplete()) return;
+    addReport(scores, reportDate);
     clearDraft(student.id);
     toast.success("Penilaian disimpan", {
-      description: "Tersedia di Riwayat siswa.",
+      description: `Tersimpan untuk ${formatISODateID(reportDate)}.`,
     });
     onDone(student);
   };
 
   const handleSubmit = () => {
-    addReport(scores);
+    if (!guardComplete()) return;
+    addReport(scores, reportDate);
     clearDraft(student.id);
-    generatePdf(student, scores, school);
-    const link = buildWaLink(student, scores, school);
+    generatePdf(student, scores, school, reportDate);
+    const link = buildWaLink(student, scores, school, reportDate);
     window.open(link, "_blank");
     toast.success("PDF terunduh & WhatsApp dibuka", {
       description: "Lampirkan PDF di chat WA orang tua.",
@@ -137,12 +158,27 @@ export function AssessmentForm({
 
       <div className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border sm:p-6">
         <div className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
-          {student.className}
+          {student.className} · {student.day}
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">{student.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–4 (BB/MB/BSH/BSB)
         </p>
+
+        {/* Date picker */}
+        <label className="mt-4 flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <CalendarIcon className="h-3.5 w-3.5" /> Tanggal Laporan
+          </span>
+          <input
+            type="date"
+            value={reportDate}
+            max={todayISO()}
+            onChange={(e) => setReportDate(e.target.value || todayISO())}
+            className="rounded-lg bg-background px-3 py-2 text-sm font-medium text-foreground ring-1 ring-border focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <span className="text-xs text-muted-foreground">{formatISODateID(reportDate)}</span>
+        </label>
 
         {/* Legend */}
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
@@ -201,8 +237,14 @@ export function AssessmentForm({
                     <ol className="space-y-2">
                       {el.indicators.map((ind, idx) => {
                         const cur = scores[ind.id];
+                        const missing = cur !== 1 && cur !== 2 && cur !== 3 && cur !== 4;
                         return (
-                          <li key={ind.id} className="rounded-lg bg-muted/30 p-3">
+                          <li
+                            key={ind.id}
+                            className={`rounded-lg p-3 ${
+                              missing ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-muted/30"
+                            }`}
+                          >
                             <div className="mb-2 flex gap-2 text-sm">
                               <span className="shrink-0 font-semibold text-primary">{idx + 1}.</span>
                               <span className="text-foreground">{ind.label}</span>
@@ -239,10 +281,18 @@ export function AssessmentForm({
           })}
         </div>
 
+        {!complete && (
+          <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive ring-1 ring-destructive/30">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Lengkapi semua indikator (skor 1–4) sebelum menyimpan atau mengirim ke WhatsApp.
+          </div>
+        )}
+
         <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <button
             onClick={handleSaveOnly}
-            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-4 font-semibold text-white shadow-md transition hover:opacity-90 active:scale-[0.98]"
+            disabled={!complete}
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-4 font-semibold text-white shadow-md transition hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Save className="h-5 w-5" />
             Simpan
@@ -256,7 +306,7 @@ export function AssessmentForm({
           </button>
           <button
             onClick={() => {
-              generatePdf(student, scores, school);
+              generatePdf(student, scores, school, reportDate);
               toast.success("PDF terunduh");
             }}
             className="flex items-center justify-center gap-2 rounded-xl bg-secondary px-5 py-4 font-semibold text-secondary-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
@@ -266,7 +316,8 @@ export function AssessmentForm({
           </button>
           <button
             onClick={handleSubmit}
-            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98]"
+            disabled={!complete}
+            className="flex items-center justify-center gap-2 rounded-xl bg-primary px-5 py-4 font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:opacity-90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="h-5 w-5" />
             Kirim WA
@@ -285,12 +336,12 @@ export function AssessmentForm({
           >
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-foreground">Preview Laporan</div>
-              <div className="truncate text-xs text-muted-foreground">{pdfFileName(student)}</div>
+              <div className="truncate text-xs text-muted-foreground">{pdfFileName(student, reportDate)}</div>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <button
                 onClick={() => {
-                  generatePdf(student, scores, school);
+                  generatePdf(student, scores, school, reportDate);
                   toast.success("PDF terunduh");
                 }}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
@@ -323,12 +374,47 @@ export function AssessmentForm({
           onRemove={removeReport}
           onPreview={(rep) => {
             setShowHistory(false);
-            openPreview(rep.scores);
+            openPreview(rep.scores, rep.reportDate);
           }}
         />
       )}
     </div>
   );
+}
+
+function reportsToCsv(student: Student, reports: SavedReport[]): string {
+  const headers = ["Tanggal Laporan", "Disimpan", "Siswa", "Kelas"];
+  ELEMENTS.forEach((el) => {
+    el.indicators.forEach((ind, i) => headers.push(`${el.short} #${i + 1}`));
+    headers.push(`${el.short} (Dominan)`);
+  });
+  const escape = (v: string) => `"${v.replace(/"/g, '""')}"`;
+  const rows = [headers.map(escape).join(",")];
+  reports.forEach((r) => {
+    const d = new Date(r.savedAt);
+    const savedStr = `${r.reportDate} ${d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}`;
+    const row: string[] = [r.reportDate, savedStr, student.name, student.className];
+    ELEMENTS.forEach((el) => {
+      el.indicators.forEach((ind) => row.push(String(r.scores[ind.id] ?? "")));
+      const sum = summarizeElement(el, r.scores);
+      row.push(sum.dominant.code);
+    });
+    rows.push(row.map(escape).join(","));
+  });
+  return rows.join("\n");
+}
+
+function downloadCsv(student: Student, reports: SavedReport[]) {
+  const csv = reportsToCsv(student, reports);
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Riwayat-${student.name.replace(/\s+/g, "_")}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 function HistoryPanel({
@@ -344,65 +430,121 @@ function HistoryPanel({
   onRemove: (id: string) => void;
   onPreview: (rep: SavedReport) => void;
 }) {
+  const [query, setQuery] = useState("");
+
+  const enriched = useMemo(
+    () =>
+      reports.map((r) => {
+        const d = new Date(r.savedAt);
+        const dateStr = formatISODateID(r.reportDate);
+        const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+        const haystack = `${r.reportDate} ${dateStr} ${time}`.toLowerCase();
+        return { r, dateStr, time, haystack };
+      }),
+    [reports],
+  );
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return enriched;
+    return enriched.filter((x) => x.haystack.includes(q));
+  }, [enriched, query]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
       <div
         className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-t-2xl bg-card shadow-xl ring-1 ring-border sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
           <div className="min-w-0">
             <div className="text-sm font-semibold text-foreground">Riwayat Laporan</div>
             <div className="truncate text-xs text-muted-foreground">{student.name}</div>
           </div>
-          <button
-            onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-md bg-muted hover:bg-muted/70"
-            aria-label="Tutup"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5">
+            <button
+              onClick={() => {
+                if (reports.length === 0) {
+                  toast.error("Belum ada data untuk diekspor");
+                  return;
+                }
+                downloadCsv(student, reports);
+                toast.success("CSV terunduh");
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground ring-1 ring-border hover:bg-muted"
+            >
+              <FileDown className="h-3.5 w-3.5" /> CSV
+            </button>
+            <button
+              onClick={onClose}
+              className="grid h-8 w-8 place-items-center rounded-md bg-muted hover:bg-muted/70"
+              aria-label="Tutup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div className="max-h-[70vh] overflow-y-auto p-3">
+        <div className="border-b border-border px-3 py-2">
+          <label className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border focus-within:ring-primary">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cari tanggal atau jam (mis. 2026-05 atau 09:30)"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="text-xs text-muted-foreground hover:text-foreground"
+                aria-label="Reset pencarian"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </label>
+        </div>
+        <div className="max-h-[60vh] overflow-y-auto p-3">
           {reports.length === 0 ? (
             <div className="px-3 py-10 text-center text-sm text-muted-foreground">
               Belum ada laporan tersimpan untuk siswa ini.
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+              Tidak ada laporan cocok dengan "{query}".
+            </div>
           ) : (
             <ul className="space-y-2">
-              {reports.map((r) => {
-                const d = new Date(r.savedAt);
-                const dateStr = formatDateID(d);
-                const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
-                return (
-                  <li
-                    key={r.id}
-                    className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border"
-                  >
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
-                      <div className="text-xs text-muted-foreground">Pukul {time}</div>
+              {filtered.map(({ r, dateStr, time }) => (
+                <li
+                  key={r.id}
+                  className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border"
+                >
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Disimpan pukul {time}
                     </div>
-                    <div className="flex shrink-0 items-center gap-1.5">
-                      <button
-                        onClick={() => onPreview(r)}
-                        className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Preview
-                      </button>
-                      <button
-                        onClick={() => {
-                          if (confirm("Hapus laporan ini?")) onRemove(r.id);
-                        }}
-                        className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
-                        aria-label="Hapus"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </li>
-                );
-              })}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    <button
+                      onClick={() => onPreview(r)}
+                      className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                    >
+                      <Eye className="h-3.5 w-3.5" /> Preview
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm("Hapus laporan ini?")) onRemove(r.id);
+                      }}
+                      className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
+                      aria-label="Hapus"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
             </ul>
           )}
         </div>
@@ -410,3 +552,6 @@ function HistoryPanel({
     </div>
   );
 }
+
+// keep import used to avoid TS noUnusedLocals if helper unused
+void formatDateID;
