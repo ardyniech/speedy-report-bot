@@ -1,11 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { STUDENTS, formatDateID, type Student } from "@/lib/students";
+import { useEffect, useMemo, useState } from "react";
+import {
+  STUDENTS,
+  WEEK_DAYS,
+  formatDateID,
+  todayWeekDay,
+  type Student,
+  type WeekDay,
+} from "@/lib/students";
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { SchoolSettingsDialog } from "@/components/SchoolSettingsDialog";
 import { useSchool } from "@/lib/school";
 import { Toaster } from "@/components/ui/sonner";
-import { Sparkles, Check, ChevronRight, GraduationCap } from "lucide-react";
+import { Sparkles, Check, ChevronRight, GraduationCap, CalendarDays } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
