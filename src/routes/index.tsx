@@ -109,16 +109,40 @@ function Index() {
               </div>
             </div>
 
-            <div className="mb-4 flex flex-wrap gap-2">
-              <FilterChip active={classFilter === "all"} onClick={() => setClassFilter("all")}>
-                Semua
-              </FilterChip>
-              {classes.map((c) => (
-                <FilterChip key={c} active={classFilter === c} onClick={() => setClassFilter(c)}>
-                  {c}
+            <div className="mb-3 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <CalendarDays className="h-3.5 w-3.5" /> Hari
+                </span>
+                <FilterChip active={dayFilter === "all"} onClick={() => setDayFilter("all")}>
+                  Semua
                 </FilterChip>
-              ))}
+                {WEEK_DAYS.map((d) => (
+                  <FilterChip key={d} active={dayFilter === d} onClick={() => setDayFilter(d)}>
+                    {d}
+                  </FilterChip>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Kelas
+                </span>
+                <FilterChip active={classFilter === "all"} onClick={() => setClassFilter("all")}>
+                  Semua
+                </FilterChip>
+                {classes.map((c) => (
+                  <FilterChip key={c} active={classFilter === c} onClick={() => setClassFilter(c)}>
+                    {c}
+                  </FilterChip>
+                ))}
+              </div>
             </div>
+
+            {filtered.length === 0 && (
+              <div className="mb-4 rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground ring-1 ring-border">
+                Tidak ada siswa untuk filter ini.
+              </div>
+            )}
 
             <div className="grid gap-2 sm:grid-cols-2">
               {filtered.map((s) => {
