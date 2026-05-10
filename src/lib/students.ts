@@ -183,3 +183,30 @@ export function summarizeElement(el: Element, scores: Scores) {
 export function formatDateID(d: Date) {
   return d.toLocaleDateString("id-ID", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
 }
+
+export function todayISO(d: Date = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function parseISODate(iso: string): Date {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+export function formatISODateID(iso: string) {
+  return formatDateID(parseISODate(iso));
+}
+
+export function isScoresComplete(scores: Scores): boolean {
+  for (const el of ELEMENTS) {
+    for (const ind of el.indicators) {
+      const v = scores[ind.id];
+      if (v !== 1 && v !== 2 && v !== 3 && v !== 4) return false;
+    }
+  }
+  return true;
+}
+
