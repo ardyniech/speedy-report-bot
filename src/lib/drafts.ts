@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import type { Scores } from "./students";
+import { todayISO, type Scores } from "./students";
 
 const draftKey = (id: string) => `draft:${id}`;
 const reportsKey = (id: string) => `reports:${id}`;
 
 export type SavedReport = {
   id: string;
-  savedAt: string; // ISO
+  /** Tanggal laporan (YYYY-MM-DD) yang dipilih guru. */
+  reportDate: string;
+  /** Waktu sistem ketika data disimpan (ISO). */
+  savedAt: string;
   scores: Scores;
 };
 
@@ -45,12 +48,18 @@ export function hasDraft(studentId: string): boolean {
 }
 
 export function listReports(studentId: string): SavedReport[] {
-  return safeRead<SavedReport[]>(reportsKey(studentId)) ?? [];
+  const list = safeRead<SavedReport[]>(reportsKey(studentId)) ?? [];
+  // Backfill reportDate untuk data lama
+  return list.map((r) => ({
+    ...r,
+    reportDate: r.reportDate ?? (r.savedAt ? r.savedAt.slice(0, 10) : todayISO()),
+  }));
 }
-export function saveReport(studentId: string, scores: Scores): SavedReport {
+export function saveReport(studentId: string, scores: Scores, reportDate: string): SavedReport {
   const list = listReports(studentId);
   const rep: SavedReport = {
     id: `rep-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    reportDate,
     savedAt: new Date().toISOString(),
     scores: { ...scores },
   };
@@ -75,8 +84,8 @@ export function useReports(studentId: string) {
       deleteReport(studentId, id);
       refresh();
     },
-    add: (scores: Scores) => {
-      saveReport(studentId, scores);
+    add: (scores: Scores, reportDate: string) => {
+      saveReport(studentId, scores, reportDate);
       refresh();
     },
   };
