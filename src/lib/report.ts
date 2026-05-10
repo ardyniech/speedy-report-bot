@@ -199,17 +199,24 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
   return doc;
 }
 
-export function pdfFileName(student: Student) {
-  return `Laporan-${student.name.replace(/\s+/g, "_")}.pdf`;
+export function pdfFileName(student: Student, reportDate?: string) {
+  const datePart = reportDate ?? "";
+  const base = `Laporan-${student.name.replace(/\s+/g, "_")}`;
+  return datePart ? `${base}-${datePart}.pdf` : `${base}.pdf`;
 }
 
-export function generatePdf(student: Student, scores: Scores, school: SchoolSettings) {
-  const doc = buildPdf(student, scores, school);
-  doc.save(pdfFileName(student));
+export function generatePdf(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const doc = buildPdf(student, scores, school, reportDate);
+  doc.save(pdfFileName(student, reportDate));
 }
 
-export function previewPdfUrl(student: Student, scores: Scores, school: SchoolSettings) {
-  const doc = buildPdf(student, scores, school);
+export function previewPdfUrl(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const doc = buildPdf(student, scores, school, reportDate);
   const blob = doc.output("blob");
   return URL.createObjectURL(blob);
 }
+
+// Hindari unused-import warning bila helper di atas tidak terpakai pada beberapa build.
+void formatDateID;
+void parseISODate;
+
