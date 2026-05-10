@@ -5,12 +5,18 @@ import {
   scoreToCategory,
   summarizeElement,
   formatDateID,
+  formatISODateID,
+  parseISODate,
   type Scores,
   type Student,
 } from "./students";
 import type { SchoolSettings } from "./school";
 
 export { scoreToCategory };
+
+function formatReportDate(reportDate?: string) {
+  return reportDate ? formatISODateID(reportDate) : formatDateID(new Date());
+}
 
 export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings) {
   const date = formatDateID(new Date());
