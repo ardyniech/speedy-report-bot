@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ELEMENTS,
   CATEGORIES,
   buildDefaultScores,
   summarizeElement,
+  formatDateID,
   type Score,
   type Scores,
   type Student,
@@ -11,8 +12,26 @@ import {
 } from "@/lib/students";
 import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/report";
 import { useSchool } from "@/lib/school";
+import {
+  loadDraft,
+  saveDraft,
+  clearDraft,
+  hasDraft,
+  useReports,
+  type SavedReport,
+} from "@/lib/drafts";
 import { toast } from "sonner";
-import { ArrowLeft, FileDown, Send, ChevronDown, Eye, X } from "lucide-react";
+import {
+  ArrowLeft,
+  FileDown,
+  Send,
+  ChevronDown,
+  Eye,
+  X,
+  Save,
+  History,
+  Trash2,
+} from "lucide-react";
 
 const SCORE_OPTIONS: Score[] = [1, 2, 3, 4];
 
@@ -26,13 +45,30 @@ export function AssessmentForm({
   onDone: (s: Student) => void;
 }) {
   const school = useSchool();
-  const [scores, setScores] = useState<Scores>(() => buildDefaultScores());
+  const [scores, setScores] = useState<Scores>(
+    () => loadDraft(student.id) ?? buildDefaultScores(),
+  );
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
+  const { reports, add: addReport, remove: removeReport } = useReports(student.id);
 
-  const openPreview = () => {
+  // Auto-save draft on every score change
+  useEffect(() => {
+    saveDraft(student.id, scores);
+  }, [student.id, scores]);
+
+  // Notify once if a draft was loaded
+  useEffect(() => {
+    if (hasDraft(student.id)) {
+      toast.message("Draft dimuat", { description: "Lanjutkan pengisian dari terakhir." });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.id]);
+
+  const openPreview = (s: Scores = scores) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(previewPdfUrl(student, scores, school));
+    setPreviewUrl(previewPdfUrl(student, s, school));
   };
   const closePreview = () => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -50,7 +86,18 @@ export function AssessmentForm({
     });
   };
 
+  const handleSaveOnly = () => {
+    addReport(scores);
+    clearDraft(student.id);
+    toast.success("Penilaian disimpan", {
+      description: "Tersedia di Riwayat siswa.",
+    });
+    onDone(student);
+  };
+
   const handleSubmit = () => {
+    addReport(scores);
+    clearDraft(student.id);
     generatePdf(student, scores, school);
     const link = buildWaLink(student, scores, school);
     window.open(link, "_blank");
@@ -67,12 +114,26 @@ export function AssessmentForm({
 
   return (
     <div className="mx-auto max-w-2xl">
-      <button
-        onClick={onBack}
-        className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Kembali ke daftar siswa
-      </button>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <button
+          onClick={onBack}
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" /> Daftar siswa
+        </button>
+        <button
+          onClick={() => setShowHistory(true)}
+          className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+        >
+          <History className="h-3.5 w-3.5" />
+          Riwayat
+          {reports.length > 0 && (
+            <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+              {reports.length}
+            </span>
+          )}
+        </button>
+      </div>
 
       <div className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border sm:p-6">
         <div className="mb-1 text-xs font-medium uppercase tracking-wider text-primary">
@@ -178,13 +239,20 @@ export function AssessmentForm({
           })}
         </div>
 
-        <div className="mt-6 grid gap-2 sm:grid-cols-3">
+        <div className="mt-6 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           <button
-            onClick={openPreview}
+            onClick={handleSaveOnly}
+            className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-4 font-semibold text-white shadow-md transition hover:opacity-90 active:scale-[0.98]"
+          >
+            <Save className="h-5 w-5" />
+            Simpan
+          </button>
+          <button
+            onClick={() => openPreview()}
             className="flex items-center justify-center gap-2 rounded-xl bg-card px-5 py-4 font-semibold text-foreground ring-1 ring-border transition hover:bg-muted active:scale-[0.98]"
           >
             <Eye className="h-5 w-5" />
-            Preview PDF
+            Preview
           </button>
           <button
             onClick={() => {
@@ -205,7 +273,7 @@ export function AssessmentForm({
           </button>
         </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <Eye className="h-3 w-3" /> Cek dulu lewat Preview, lalu unduh atau kirim ke WA
+          <Save className="h-3 w-3" /> Draft otomatis tersimpan — bisa dilanjutkan kapan saja.
         </p>
       </div>
 
@@ -246,6 +314,99 @@ export function AssessmentForm({
           />
         </div>
       )}
+
+      {showHistory && (
+        <HistoryPanel
+          student={student}
+          reports={reports}
+          onClose={() => setShowHistory(false)}
+          onRemove={removeReport}
+          onPreview={(rep) => {
+            setShowHistory(false);
+            openPreview(rep.scores);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function HistoryPanel({
+  student,
+  reports,
+  onClose,
+  onRemove,
+  onPreview,
+}: {
+  student: Student;
+  reports: SavedReport[];
+  onClose: () => void;
+  onRemove: (id: string) => void;
+  onPreview: (rep: SavedReport) => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
+      <div
+        className="max-h-[85vh] w-full max-w-lg overflow-hidden rounded-t-2xl bg-card shadow-xl ring-1 ring-border sm:rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold text-foreground">Riwayat Laporan</div>
+            <div className="truncate text-xs text-muted-foreground">{student.name}</div>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-md bg-muted hover:bg-muted/70"
+            aria-label="Tutup"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="max-h-[70vh] overflow-y-auto p-3">
+          {reports.length === 0 ? (
+            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+              Belum ada laporan tersimpan untuk siswa ini.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {reports.map((r) => {
+                const d = new Date(r.savedAt);
+                const dateStr = formatDateID(d);
+                const time = d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+                return (
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
+                      <div className="text-xs text-muted-foreground">Pukul {time}</div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        onClick={() => onPreview(r)}
+                        className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> Preview
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm("Hapus laporan ini?")) onRemove(r.id);
+                        }}
+                        className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
+                        aria-label="Hapus"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
