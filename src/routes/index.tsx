@@ -71,8 +71,8 @@ function Index() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="hidden text-right text-xs text-muted-foreground sm:block">
-              {formatDateID(new Date())}
+            <span className="hidden text-right text-xs text-muted-foreground sm:block" suppressHydrationWarning>
+              {todayLabel}
             </span>
             <SchoolSettingsDialog />
           </div>
