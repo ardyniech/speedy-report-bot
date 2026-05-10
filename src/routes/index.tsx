@@ -28,10 +28,27 @@ function Index() {
   const [active, setActive] = useState<Student | null>(null);
   const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [classFilter, setClassFilter] = useState<string>("all");
+  const [dayFilter, setDayFilter] = useState<WeekDay | "all">("all");
+  const [todayLabel, setTodayLabel] = useState<string>("");
   const school = useSchool();
 
+  // Hindari hydration mismatch: render tanggal hanya di client.
+  useEffect(() => {
+    setTodayLabel(formatDateID(new Date()));
+    const td = todayWeekDay();
+    if (td) setDayFilter(td);
+  }, []);
+
   const classes = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.className))), []);
-  const filtered = classFilter === "all" ? STUDENTS : STUDENTS.filter((s) => s.className === classFilter);
+  const filtered = useMemo(
+    () =>
+      STUDENTS.filter(
+        (s) =>
+          (classFilter === "all" || s.className === classFilter) &&
+          (dayFilter === "all" || s.day === dayFilter),
+      ),
+    [classFilter, dayFilter],
+  );
   const doneCount = filtered.filter((s) => doneIds.has(s.id)).length;
 
   return (
