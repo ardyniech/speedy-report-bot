@@ -18,8 +18,8 @@ function formatReportDate(reportDate?: string) {
   return reportDate ? formatISODateID(reportDate) : formatDateID(new Date());
 }
 
-export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings) {
-  const date = formatDateID(new Date());
+export function buildWaMessage(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const date = formatReportDate(reportDate);
   const lines: string[] = [
     `*Laporan Penilaian Harian*`,
     school.name,
@@ -39,12 +39,12 @@ export function buildWaMessage(student: Student, scores: Scores, school: SchoolS
   return lines.join("\n");
 }
 
-export function buildWaLink(student: Student, scores: Scores, school: SchoolSettings) {
-  const text = encodeURIComponent(buildWaMessage(student, scores, school));
+export function buildWaLink(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
+  const text = encodeURIComponent(buildWaMessage(student, scores, school, reportDate));
   return `https://wa.me/${student.parentWa}?text=${text}`;
 }
 
-function buildPdf(student: Student, scores: Scores, school: SchoolSettings) {
+function buildPdf(student: Student, scores: Scores, school: SchoolSettings, reportDate?: string) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
