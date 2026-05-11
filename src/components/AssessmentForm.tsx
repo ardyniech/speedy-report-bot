@@ -559,7 +559,7 @@ function HistoryPanel({
             </button>
           </div>
         </div>
-        <div className="border-b border-border px-3 py-2">
+        <div className="space-y-2 border-b border-border px-3 py-2">
           <label className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border focus-within:ring-primary">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
@@ -578,6 +578,43 @@ function HistoryPanel({
               </button>
             )}
           </label>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-semibold uppercase tracking-wider text-muted-foreground">Rentang</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="rounded-md bg-background px-2 py-1 ring-1 ring-border focus:outline-none focus:ring-primary"
+            />
+            <span className="text-muted-foreground">s/d</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="rounded-md bg-background px-2 py-1 ring-1 ring-border focus:outline-none focus:ring-primary"
+            />
+            <button
+              onClick={() => {
+                const t = todayISO();
+                setFromDate(t);
+                setToDate(t);
+              }}
+              className="rounded-md bg-card px-2 py-1 font-medium ring-1 ring-border hover:bg-muted"
+            >
+              Hari ini
+            </button>
+            {(fromDate || toDate) && (
+              <button
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="rounded-md bg-card px-2 py-1 font-medium text-muted-foreground ring-1 ring-border hover:text-foreground"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-3">
           {reports.length === 0 ? (
