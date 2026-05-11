@@ -466,13 +466,17 @@ function reportsToCsv(student: Student, reports: SavedReport[]): string {
   return rows.join("\n");
 }
 
-function downloadCsv(student: Student, reports: SavedReport[]) {
+function downloadCsv(student: Student, reports: SavedReport[], range?: { from?: string; to?: string }) {
   const csv = reportsToCsv(student, reports);
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+  const suffix =
+    range && (range.from || range.to)
+      ? `_${range.from || "awal"}_sd_${range.to || "akhir"}`
+      : "";
   a.href = url;
-  a.download = `Riwayat-${student.name.replace(/\s+/g, "_")}.csv`;
+  a.download = `Riwayat-${student.name.replace(/\s+/g, "_")}${suffix}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
