@@ -153,6 +153,8 @@ function Index() {
               </div>
             </div>
 
+            <BulkSendBar students={filtered} school={school} />
+
             {filtered.length === 0 && (
               <div className="mb-4 rounded-xl bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground ring-1 ring-border">
                 Tidak ada siswa untuk filter ini.
