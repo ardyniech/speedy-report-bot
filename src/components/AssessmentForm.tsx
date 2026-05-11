@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ELEMENTS,
-  CATEGORIES,
+  CATEGORY_BANDS,
+  SCORE_VALUES,
+  scoreToCategory,
   buildDefaultScores,
   summarizeElement,
   formatDateID,
@@ -25,6 +27,16 @@ import {
 } from "@/lib/drafts";
 import { toast } from "sonner";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   FileDown,
   Send,
@@ -38,8 +50,6 @@ import {
   Search,
   AlertCircle,
 } from "lucide-react";
-
-const SCORE_OPTIONS: Score[] = [1, 2, 3, 4];
 
 export function AssessmentForm({
   student,
@@ -98,15 +108,21 @@ export function AssessmentForm({
   const guardComplete = (): boolean => {
     if (!complete) {
       toast.error("Belum lengkap", {
-        description: "Setiap indikator wajib bernilai 1–4 sebelum disimpan atau dikirim.",
+        description: "Setiap indikator wajib bernilai 1–10 sebelum disimpan atau dikirim.",
       });
       return false;
     }
     return true;
   };
 
-  const handleSaveOnly = () => {
-    if (!guardComplete()) return;
+  // Overwrite confirmation state
+  const [pendingAction, setPendingAction] = useState<null | "save" | "submit">(null);
+  const existingForDate = useMemo(
+    () => reports.filter((r) => r.reportDate === reportDate),
+    [reports, reportDate],
+  );
+
+  const performSaveOnly = () => {
     addReport(scores, reportDate);
     clearDraft(student.id);
     toast.success("Penilaian disimpan", {
@@ -114,9 +130,7 @@ export function AssessmentForm({
     });
     onDone(student);
   };
-
-  const handleSubmit = () => {
-    if (!guardComplete()) return;
+  const performSubmit = () => {
     addReport(scores, reportDate);
     clearDraft(student.id);
     generatePdf(student, scores, school, reportDate);
@@ -126,6 +140,17 @@ export function AssessmentForm({
       description: "Lampirkan PDF di chat WA orang tua.",
     });
     onDone(student);
+  };
+
+  const handleSaveOnly = () => {
+    if (!guardComplete()) return;
+    if (existingForDate.length > 0) return setPendingAction("save");
+    performSaveOnly();
+  };
+  const handleSubmit = () => {
+    if (!guardComplete()) return;
+    if (existingForDate.length > 0) return setPendingAction("submit");
+    performSubmit();
   };
 
   const totalIndicators = useMemo(
@@ -162,7 +187,7 @@ export function AssessmentForm({
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">{student.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–4 (BB/MB/BSH/BSB)
+          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–10 (BB/MB/BSH/BSB)
         </p>
 
         {/* Date picker */}
@@ -180,15 +205,15 @@ export function AssessmentForm({
           <span className="text-xs text-muted-foreground">{formatISODateID(reportDate)}</span>
         </label>
 
-        {/* Legend */}
+        {/* Legend (band) */}
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
-          {SCORE_OPTIONS.map((s) => (
-            <div key={s} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
-              <span className="grid h-5 w-5 place-items-center rounded bg-primary/15 text-[10px] font-bold text-primary">
-                {s}
+          {CATEGORY_BANDS.map((b) => (
+            <div key={b.code} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <span className="grid h-5 min-w-[2.25rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                {b.min}–{b.max}
               </span>
-              <span className="font-semibold text-foreground">{CATEGORIES[s].code}</span>
-              <span className="truncate text-muted-foreground">{CATEGORIES[s].label}</span>
+              <span className="font-semibold text-foreground">{b.code}</span>
+              <span className="truncate text-muted-foreground">{b.label}</span>
             </div>
           ))}
         </div>
@@ -220,24 +245,28 @@ export function AssessmentForm({
 
                 {open && (
                   <div className="bg-card p-3 sm:p-4">
-                    {/* Bulk set */}
+                    {/* Bulk set per band */}
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
                       <span className="text-muted-foreground">Set semua:</span>
-                      {SCORE_OPTIONS.map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setAllInElement(el.key, v)}
-                          className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
-                        >
-                          {v} · {CATEGORIES[v].code}
-                        </button>
-                      ))}
+                      {CATEGORY_BANDS.map((b) => {
+                        const mid = Math.round((b.min + b.max) / 2) as Score;
+                        return (
+                          <button
+                            key={b.code}
+                            onClick={() => setAllInElement(el.key, mid)}
+                            className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
+                          >
+                            {b.code} ({b.min}–{b.max})
+                          </button>
+                        );
+                      })}
                     </div>
 
                     <ol className="space-y-2">
                       {el.indicators.map((ind, idx) => {
                         const cur = scores[ind.id];
-                        const missing = cur !== 1 && cur !== 2 && cur !== 3 && cur !== 4;
+                        const missing =
+                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 10;
                         return (
                           <li
                             key={ind.id}
@@ -245,27 +274,33 @@ export function AssessmentForm({
                               missing ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-muted/30"
                             }`}
                           >
-                            <div className="mb-2 flex gap-2 text-sm">
-                              <span className="shrink-0 font-semibold text-primary">{idx + 1}.</span>
-                              <span className="text-foreground">{ind.label}</span>
+                            <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+                              <div className="flex gap-2">
+                                <span className="shrink-0 font-semibold text-primary">{idx + 1}.</span>
+                                <span className="text-foreground">{ind.label}</span>
+                              </div>
+                              {!missing && (
+                                <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                  {cur} · {scoreToCategory(cur).code}
+                                </span>
+                              )}
                             </div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {SCORE_OPTIONS.map((v) => {
+                            <div className="grid grid-cols-5 gap-1 sm:grid-cols-10">
+                              {SCORE_VALUES.map((v) => {
                                 const active = cur === v;
+                                const cat = scoreToCategory(v);
                                 return (
                                   <button
                                     key={v}
                                     onClick={() => setScore(ind.id, v)}
+                                    title={`${v} · ${cat.code}`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
                                         : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"
                                     }`}
                                   >
-                                    <div>{v}</div>
-                                    <div className="text-[10px] font-semibold opacity-80">
-                                      {CATEGORIES[v].code}
-                                    </div>
+                                    {v}
                                   </button>
                                 );
                               })}
@@ -284,7 +319,7 @@ export function AssessmentForm({
         {!complete && (
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive ring-1 ring-destructive/30">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            Lengkapi semua indikator (skor 1–4) sebelum menyimpan atau mengirim ke WhatsApp.
+            Lengkapi semua indikator (skor 1–10) sebelum menyimpan atau mengirim ke WhatsApp.
           </div>
         )}
 
@@ -378,6 +413,33 @@ export function AssessmentForm({
           }}
         />
       )}
+
+      <AlertDialog open={pendingAction !== null} onOpenChange={(o) => !o && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Simpan ulang untuk tanggal ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sudah ada {existingForDate.length} laporan tersimpan untuk{" "}
+              <span className="font-semibold text-foreground">{student.name}</span> pada tanggal{" "}
+              <span className="font-semibold text-foreground">{formatISODateID(reportDate)}</span>.
+              Menyimpan lagi akan menambah entri baru di riwayat (bukan menimpa). Lanjutkan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const act = pendingAction;
+                setPendingAction(null);
+                if (act === "save") performSaveOnly();
+                else if (act === "submit") performSubmit();
+              }}
+            >
+              Ya, simpan lagi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -404,13 +466,17 @@ function reportsToCsv(student: Student, reports: SavedReport[]): string {
   return rows.join("\n");
 }
 
-function downloadCsv(student: Student, reports: SavedReport[]) {
+function downloadCsv(student: Student, reports: SavedReport[], range?: { from?: string; to?: string }) {
   const csv = reportsToCsv(student, reports);
   const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
+  const suffix =
+    range && (range.from || range.to)
+      ? `_${range.from || "awal"}_sd_${range.to || "akhir"}`
+      : "";
   a.href = url;
-  a.download = `Riwayat-${student.name.replace(/\s+/g, "_")}.csv`;
+  a.download = `Riwayat-${student.name.replace(/\s+/g, "_")}${suffix}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -431,6 +497,8 @@ function HistoryPanel({
   onPreview: (rep: SavedReport) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const enriched = useMemo(
     () =>
@@ -446,9 +514,23 @@ function HistoryPanel({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return enriched;
-    return enriched.filter((x) => x.haystack.includes(q));
-  }, [enriched, query]);
+    return enriched.filter((x) => {
+      if (q && !x.haystack.includes(q)) return false;
+      if (fromDate && x.r.reportDate < fromDate) return false;
+      if (toDate && x.r.reportDate > toDate) return false;
+      return true;
+    });
+  }, [enriched, query, fromDate, toDate]);
+
+  const exportCsv = () => {
+    const data = filtered.map((x) => x.r);
+    if (data.length === 0) {
+      toast.error("Tidak ada data sesuai filter");
+      return;
+    }
+    downloadCsv(student, data, { from: fromDate, to: toDate });
+    toast.success(`CSV terunduh (${data.length} laporan)`);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
@@ -463,14 +545,7 @@ function HistoryPanel({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <button
-              onClick={() => {
-                if (reports.length === 0) {
-                  toast.error("Belum ada data untuk diekspor");
-                  return;
-                }
-                downloadCsv(student, reports);
-                toast.success("CSV terunduh");
-              }}
+              onClick={exportCsv}
               className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground ring-1 ring-border hover:bg-muted"
             >
               <FileDown className="h-3.5 w-3.5" /> CSV
@@ -484,7 +559,7 @@ function HistoryPanel({
             </button>
           </div>
         </div>
-        <div className="border-b border-border px-3 py-2">
+        <div className="space-y-2 border-b border-border px-3 py-2">
           <label className="flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 ring-1 ring-border focus-within:ring-primary">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
@@ -503,6 +578,43 @@ function HistoryPanel({
               </button>
             )}
           </label>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-semibold uppercase tracking-wider text-muted-foreground">Rentang</span>
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="rounded-md bg-background px-2 py-1 ring-1 ring-border focus:outline-none focus:ring-primary"
+            />
+            <span className="text-muted-foreground">s/d</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="rounded-md bg-background px-2 py-1 ring-1 ring-border focus:outline-none focus:ring-primary"
+            />
+            <button
+              onClick={() => {
+                const t = todayISO();
+                setFromDate(t);
+                setToDate(t);
+              }}
+              className="rounded-md bg-card px-2 py-1 font-medium ring-1 ring-border hover:bg-muted"
+            >
+              Hari ini
+            </button>
+            {(fromDate || toDate) && (
+              <button
+                onClick={() => {
+                  setFromDate("");
+                  setToDate("");
+                }}
+                className="rounded-md bg-card px-2 py-1 font-medium text-muted-foreground ring-1 ring-border hover:text-foreground"
+              >
+                Reset
+              </button>
+            )}
+          </div>
         </div>
         <div className="max-h-[60vh] overflow-y-auto p-3">
           {reports.length === 0 ? (

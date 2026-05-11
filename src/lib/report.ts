@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
 import {
   ELEMENTS,
-  CATEGORIES,
   scoreToCategory,
   summarizeElement,
   formatDateID,
@@ -112,7 +111,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("Skala: 1=BB (Belum Berkembang)  2=MB (Mulai Berkembang)  3=BSH (Sesuai Harapan)  4=BSB (Sangat Baik)", M, y);
+  doc.text("Skala 1–10  •  1–2 BB (Belum Berkembang)  •  3–4 MB (Mulai Berkembang)  •  5–7 BSH (Sesuai Harapan)  •  8–10 BSB (Sangat Baik)", M, y);
   y += 14;
 
   // === ELEMENTS ===
@@ -138,8 +137,8 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
 
     doc.setFont("helvetica", "normal");
     el.indicators.forEach((ind, i) => {
-      const score = scores[ind.id] ?? 3;
-      const cat = CATEGORIES[score];
+      const score = scores[ind.id] ?? 6;
+      const cat = scoreToCategory(score);
       const labelLines = doc.splitTextToSize(ind.label, W - 2 * M - 90) as string[];
       const rowH = Math.max(14, labelLines.length * 10 + 4);
       ensureSpace(rowH);
