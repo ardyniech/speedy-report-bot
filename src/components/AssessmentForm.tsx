@@ -108,15 +108,21 @@ export function AssessmentForm({
   const guardComplete = (): boolean => {
     if (!complete) {
       toast.error("Belum lengkap", {
-        description: "Setiap indikator wajib bernilai 1–4 sebelum disimpan atau dikirim.",
+        description: "Setiap indikator wajib bernilai 1–10 sebelum disimpan atau dikirim.",
       });
       return false;
     }
     return true;
   };
 
-  const handleSaveOnly = () => {
-    if (!guardComplete()) return;
+  // Overwrite confirmation state
+  const [pendingAction, setPendingAction] = useState<null | "save" | "submit">(null);
+  const existingForDate = useMemo(
+    () => reports.filter((r) => r.reportDate === reportDate),
+    [reports, reportDate],
+  );
+
+  const performSaveOnly = () => {
     addReport(scores, reportDate);
     clearDraft(student.id);
     toast.success("Penilaian disimpan", {
@@ -124,9 +130,7 @@ export function AssessmentForm({
     });
     onDone(student);
   };
-
-  const handleSubmit = () => {
-    if (!guardComplete()) return;
+  const performSubmit = () => {
     addReport(scores, reportDate);
     clearDraft(student.id);
     generatePdf(student, scores, school, reportDate);
@@ -136,6 +140,17 @@ export function AssessmentForm({
       description: "Lampirkan PDF di chat WA orang tua.",
     });
     onDone(student);
+  };
+
+  const handleSaveOnly = () => {
+    if (!guardComplete()) return;
+    if (existingForDate.length > 0) return setPendingAction("save");
+    performSaveOnly();
+  };
+  const handleSubmit = () => {
+    if (!guardComplete()) return;
+    if (existingForDate.length > 0) return setPendingAction("submit");
+    performSubmit();
   };
 
   const totalIndicators = useMemo(
