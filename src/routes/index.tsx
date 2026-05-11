@@ -4,6 +4,8 @@ import {
   STUDENTS,
   WEEK_DAYS,
   formatDateID,
+  formatISODateID,
+  todayISO,
   todayWeekDay,
   type Student,
   type WeekDay,
@@ -11,8 +13,21 @@ import {
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { SchoolSettingsDialog } from "@/components/SchoolSettingsDialog";
 import { useSchool } from "@/lib/school";
+import { listReports } from "@/lib/drafts";
+import { generatePdf, buildWaLink } from "@/lib/report";
 import { Toaster } from "@/components/ui/sonner";
-import { Sparkles, Check, ChevronRight, GraduationCap, CalendarDays } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Sparkles, Check, ChevronRight, GraduationCap, CalendarDays, Send } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
