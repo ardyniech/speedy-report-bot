@@ -413,6 +413,33 @@ export function AssessmentForm({
           }}
         />
       )}
+
+      <AlertDialog open={pendingAction !== null} onOpenChange={(o) => !o && setPendingAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Simpan ulang untuk tanggal ini?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sudah ada {existingForDate.length} laporan tersimpan untuk{" "}
+              <span className="font-semibold text-foreground">{student.name}</span> pada tanggal{" "}
+              <span className="font-semibold text-foreground">{formatISODateID(reportDate)}</span>.
+              Menyimpan lagi akan menambah entri baru di riwayat (bukan menimpa). Lanjutkan?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const act = pendingAction;
+                setPendingAction(null);
+                if (act === "save") performSaveOnly();
+                else if (act === "submit") performSubmit();
+              }}
+            >
+              Ya, simpan lagi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
