@@ -127,57 +127,78 @@ export const ELEMENTS: Element[] = [
   },
 ];
 
-export type Score = 1 | 2 | 3 | 4;
+export type Score = number; // 1..10
 export type Scores = Record<string, Score>;
 
-export const CATEGORIES: Record<Score, { code: string; label: string; narrative: string }> = {
-  1: {
+export const SCORE_MIN = 1;
+export const SCORE_MAX = 10;
+export const SCORE_VALUES: Score[] = Array.from({ length: 10 }, (_, i) => i + 1);
+
+export type CategoryInfo = { code: string; label: string; narrative: string; min: number; max: number };
+
+export const CATEGORY_BANDS: CategoryInfo[] = [
+  {
     code: "BB",
     label: "Belum Berkembang",
+    min: 1,
+    max: 2,
     narrative:
       "Ananda belum menunjukkan ketertarikan atau kemampuan pada aspek ini dan masih membutuhkan bantuan fisik serta pendampingan penuh dari guru selama kegiatan berlangsung.",
   },
-  2: {
+  {
     code: "MB",
     label: "Mulai Berkembang",
+    min: 3,
+    max: 4,
     narrative:
       "Ananda sudah mulai mau mencoba dan berpartisipasi, namun masih sering membutuhkan bimbingan, pengingat, atau instruksi verbal dari guru untuk menyelesaikannya.",
   },
-  3: {
+  {
     code: "BSH",
     label: "Berkembang Sesuai Harapan",
+    min: 5,
+    max: 7,
     narrative:
       "Ananda mampu melakukan aktivitas secara mandiri dengan baik dan konsisten, menunjukkan perkembangan yang pas dan sesuai dengan harapan di usianya.",
   },
-  4: {
+  {
     code: "BSB",
     label: "Berkembang Sangat Baik",
+    min: 8,
+    max: 10,
     narrative:
       "Ananda sangat menguasai aspek ini dengan luar biasa, sangat proaktif, memiliki inisiatif tinggi tanpa perlu diminta, dan bahkan mampu menjadi contoh serta membantu teman-temannya.",
   },
-};
+];
 
-export function scoreToCategory(s: Score) {
-  return CATEGORIES[s];
+export function scoreToCategory(s: Score): CategoryInfo {
+  const v = Math.max(SCORE_MIN, Math.min(SCORE_MAX, Math.round(s)));
+  return CATEGORY_BANDS.find((b) => v >= b.min && v <= b.max) ?? CATEGORY_BANDS[2];
 }
+
+/** Backward-compat alias (some legacy callers use CATEGORIES[score]). */
+export const CATEGORIES = new Proxy({} as Record<number, CategoryInfo>, {
+  get: (_t, key) => scoreToCategory(Number(key)),
+});
 
 export function buildDefaultScores(): Scores {
   const out: Scores = {};
-  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 3)));
+  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 6)));
   return out;
 }
 
 export function summarizeElement(el: Element, scores: Scores) {
-  const counts: Record<Score, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
+  const counts: Record<string, number> = { BB: 0, MB: 0, BSH: 0, BSB: 0 };
   let sum = 0;
   el.indicators.forEach((ind) => {
-    const s = scores[ind.id] ?? 3;
-    counts[s]++;
+    const s = scores[ind.id] ?? 6;
+    counts[scoreToCategory(s).code]++;
     sum += s;
   });
   const avg = sum / el.indicators.length;
-  const dominantScore = (Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0] as unknown as Score);
-  return { counts, avg, dominant: CATEGORIES[Number(dominantScore) as Score] };
+  const dominantCode = Object.entries(counts).sort((a, b) => b[1] - a[1])[0][0];
+  const dominant = CATEGORY_BANDS.find((b) => b.code === dominantCode) ?? CATEGORY_BANDS[2];
+  return { counts, avg, dominant };
 }
 
 export function formatDateID(d: Date) {
@@ -204,7 +225,7 @@ export function isScoresComplete(scores: Scores): boolean {
   for (const el of ELEMENTS) {
     for (const ind of el.indicators) {
       const v = scores[ind.id];
-      if (v !== 1 && v !== 2 && v !== 3 && v !== 4) return false;
+      if (typeof v !== "number" || !Number.isInteger(v) || v < SCORE_MIN || v > SCORE_MAX) return false;
     }
   }
   return true;
