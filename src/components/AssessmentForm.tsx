@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ELEMENTS,
-  CATEGORIES,
+  CATEGORY_BANDS,
+  SCORE_VALUES,
+  scoreToCategory,
   buildDefaultScores,
   summarizeElement,
   formatDateID,
@@ -25,6 +27,16 @@ import {
 } from "@/lib/drafts";
 import { toast } from "sonner";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   ArrowLeft,
   FileDown,
   Send,
@@ -38,8 +50,6 @@ import {
   Search,
   AlertCircle,
 } from "lucide-react";
-
-const SCORE_OPTIONS: Score[] = [1, 2, 3, 4];
 
 export function AssessmentForm({
   student,
