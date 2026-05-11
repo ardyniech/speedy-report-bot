@@ -493,6 +493,8 @@ function HistoryPanel({
   onPreview: (rep: SavedReport) => void;
 }) {
   const [query, setQuery] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const enriched = useMemo(
     () =>
@@ -508,9 +510,23 @@ function HistoryPanel({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return enriched;
-    return enriched.filter((x) => x.haystack.includes(q));
-  }, [enriched, query]);
+    return enriched.filter((x) => {
+      if (q && !x.haystack.includes(q)) return false;
+      if (fromDate && x.r.reportDate < fromDate) return false;
+      if (toDate && x.r.reportDate > toDate) return false;
+      return true;
+    });
+  }, [enriched, query, fromDate, toDate]);
+
+  const exportCsv = () => {
+    const data = filtered.map((x) => x.r);
+    if (data.length === 0) {
+      toast.error("Tidak ada data sesuai filter");
+      return;
+    }
+    downloadCsv(student, data, { from: fromDate, to: toDate });
+    toast.success(`CSV terunduh (${data.length} laporan)`);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 sm:items-center" onClick={onClose}>
@@ -525,14 +541,7 @@ function HistoryPanel({
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
             <button
-              onClick={() => {
-                if (reports.length === 0) {
-                  toast.error("Belum ada data untuk diekspor");
-                  return;
-                }
-                downloadCsv(student, reports);
-                toast.success("CSV terunduh");
-              }}
+              onClick={exportCsv}
               className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-3 py-1.5 text-xs font-semibold text-secondary-foreground ring-1 ring-border hover:bg-muted"
             >
               <FileDown className="h-3.5 w-3.5" /> CSV
