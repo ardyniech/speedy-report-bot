@@ -211,3 +211,117 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
     </button>
   );
 }
+
+function BulkSendBar({
+  students,
+  school,
+}: {
+  students: Student[];
+  school: ReturnType<typeof useSchool>;
+}) {
+  const [date, setDate] = useState<string>(() => todayISO());
+  const [open, setOpen] = useState(false);
+
+  const rows = useMemo(() => {
+    return students.map((s) => {
+      const reps = listReports(s.id).filter((r) => r.reportDate === date);
+      // Pakai laporan paling baru pada tanggal tsb
+      const latest = reps[0];
+      return { student: s, hasReport: !!latest, report: latest };
+    });
+  }, [students, date]);
+
+  const ready = rows.filter((r) => r.hasReport);
+  const missing = rows.filter((r) => !r.hasReport);
+
+  const runBulk = async () => {
+    if (ready.length === 0) {
+      toast.error("Tidak ada laporan tersimpan", {
+        description: `Belum ada siswa terfilter yang punya laporan pada ${formatISODateID(date)}.`,
+      });
+      return;
+    }
+    setOpen(false);
+    let i = 0;
+    for (const row of ready) {
+      generatePdf(row.student, row.report.scores, school, date);
+      const link = buildWaLink(row.student, row.report.scores, school, date);
+      // Buka WA di tab baru dengan jeda kecil agar tidak diblok popup
+      setTimeout(() => window.open(link, "_blank"), i * 600);
+      i++;
+    }
+    toast.success(`Mengirim ${ready.length} laporan`, {
+      description: missing.length
+        ? `${missing.length} siswa dilewati (belum ada laporan tersimpan).`
+        : "Semua siswa terfilter diproses.",
+    });
+  };
+
+  if (students.length === 0) return null;
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border">
+      <div className="flex items-center gap-2 text-xs">
+        <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="font-semibold uppercase tracking-wider text-muted-foreground">Tanggal</span>
+        <input
+          type="date"
+          value={date}
+          max={todayISO()}
+          onChange={(e) => setDate(e.target.value || todayISO())}
+          className="rounded-md bg-background px-2 py-1 text-sm ring-1 ring-border focus:outline-none focus:ring-primary"
+        />
+      </div>
+      <div className="ml-auto flex items-center gap-2">
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm hover:opacity-90"
+        >
+          <Send className="h-4 w-4" /> Kirim Massal ({students.length})
+        </button>
+      </div>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kirim laporan ke {ready.length} orang tua?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tanggal: <span className="font-semibold text-foreground">{formatISODateID(date)}</span>.
+              Untuk setiap siswa: PDF akan diunduh dan tab WhatsApp akan terbuka berurutan.
+              Pastikan browser mengizinkan popup.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-56 overflow-y-auto rounded-lg ring-1 ring-border">
+            <ul className="divide-y divide-border text-sm">
+              {rows.map((r) => (
+                <li key={r.student.id} className="flex items-center justify-between gap-2 px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium text-foreground">{r.student.name}</div>
+                    <div className="truncate text-xs text-muted-foreground">
+                      {r.student.className} · {r.student.day}
+                    </div>
+                  </div>
+                  {r.hasReport ? (
+                    <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                      Siap
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                      Tidak ada laporan
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={runBulk} disabled={ready.length === 0}>
+              Kirim ({ready.length})
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
