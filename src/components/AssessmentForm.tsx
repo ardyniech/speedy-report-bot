@@ -190,15 +190,15 @@ export function AssessmentForm({
           <span className="text-xs text-muted-foreground">{formatISODateID(reportDate)}</span>
         </label>
 
-        {/* Legend */}
+        {/* Legend (band) */}
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
-          {SCORE_OPTIONS.map((s) => (
-            <div key={s} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
-              <span className="grid h-5 w-5 place-items-center rounded bg-primary/15 text-[10px] font-bold text-primary">
-                {s}
+          {CATEGORY_BANDS.map((b) => (
+            <div key={b.code} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
+              <span className="grid h-5 min-w-[2.25rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                {b.min}–{b.max}
               </span>
-              <span className="font-semibold text-foreground">{CATEGORIES[s].code}</span>
-              <span className="truncate text-muted-foreground">{CATEGORIES[s].label}</span>
+              <span className="font-semibold text-foreground">{b.code}</span>
+              <span className="truncate text-muted-foreground">{b.label}</span>
             </div>
           ))}
         </div>
@@ -230,24 +230,28 @@ export function AssessmentForm({
 
                 {open && (
                   <div className="bg-card p-3 sm:p-4">
-                    {/* Bulk set */}
+                    {/* Bulk set per band */}
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
                       <span className="text-muted-foreground">Set semua:</span>
-                      {SCORE_OPTIONS.map((v) => (
-                        <button
-                          key={v}
-                          onClick={() => setAllInElement(el.key, v)}
-                          className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
-                        >
-                          {v} · {CATEGORIES[v].code}
-                        </button>
-                      ))}
+                      {CATEGORY_BANDS.map((b) => {
+                        const mid = Math.round((b.min + b.max) / 2) as Score;
+                        return (
+                          <button
+                            key={b.code}
+                            onClick={() => setAllInElement(el.key, mid)}
+                            className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
+                          >
+                            {b.code} ({b.min}–{b.max})
+                          </button>
+                        );
+                      })}
                     </div>
 
                     <ol className="space-y-2">
                       {el.indicators.map((ind, idx) => {
                         const cur = scores[ind.id];
-                        const missing = cur !== 1 && cur !== 2 && cur !== 3 && cur !== 4;
+                        const missing =
+                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 10;
                         return (
                           <li
                             key={ind.id}
@@ -255,27 +259,33 @@ export function AssessmentForm({
                               missing ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-muted/30"
                             }`}
                           >
-                            <div className="mb-2 flex gap-2 text-sm">
-                              <span className="shrink-0 font-semibold text-primary">{idx + 1}.</span>
-                              <span className="text-foreground">{ind.label}</span>
+                            <div className="mb-2 flex items-center justify-between gap-2 text-sm">
+                              <div className="flex gap-2">
+                                <span className="shrink-0 font-semibold text-primary">{idx + 1}.</span>
+                                <span className="text-foreground">{ind.label}</span>
+                              </div>
+                              {!missing && (
+                                <span className="shrink-0 rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                                  {cur} · {scoreToCategory(cur).code}
+                                </span>
+                              )}
                             </div>
-                            <div className="grid grid-cols-4 gap-1.5">
-                              {SCORE_OPTIONS.map((v) => {
+                            <div className="grid grid-cols-5 gap-1 sm:grid-cols-10">
+                              {SCORE_VALUES.map((v) => {
                                 const active = cur === v;
+                                const cat = scoreToCategory(v);
                                 return (
                                   <button
                                     key={v}
                                     onClick={() => setScore(ind.id, v)}
+                                    title={`${v} · ${cat.code}`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
                                         : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"
                                     }`}
                                   >
-                                    <div>{v}</div>
-                                    <div className="text-[10px] font-semibold opacity-80">
-                                      {CATEGORIES[v].code}
-                                    </div>
+                                    {v}
                                   </button>
                                 );
                               })}
