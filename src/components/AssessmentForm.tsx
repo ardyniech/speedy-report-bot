@@ -187,7 +187,7 @@ export function AssessmentForm({
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">{student.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–4 (BB/MB/BSH/BSB)
+          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–10 (BB/MB/BSH/BSB)
         </p>
 
         {/* Date picker */}
@@ -319,7 +319,7 @@ export function AssessmentForm({
         {!complete && (
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive ring-1 ring-destructive/30">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            Lengkapi semua indikator (skor 1–4) sebelum menyimpan atau mengirim ke WhatsApp.
+            Lengkapi semua indikator (skor 1–10) sebelum menyimpan atau mengirim ke WhatsApp.
           </div>
         )}
 
