@@ -1,7 +1,6 @@
 import jsPDF from "jspdf";
 import {
   ELEMENTS,
-  CATEGORIES,
   scoreToCategory,
   summarizeElement,
   formatDateID,
