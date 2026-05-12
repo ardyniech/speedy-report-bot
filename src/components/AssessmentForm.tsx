@@ -108,7 +108,7 @@ export function AssessmentForm({
   const guardComplete = (): boolean => {
     if (!complete) {
       toast.error("Belum lengkap", {
-        description: "Setiap indikator wajib bernilai 1–10 sebelum disimpan atau dikirim.",
+        description: "Setiap indikator wajib bernilai 1–4 sebelum disimpan atau dikirim.",
       });
       return false;
     }
