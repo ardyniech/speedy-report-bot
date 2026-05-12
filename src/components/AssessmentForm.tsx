@@ -225,18 +225,41 @@ export function AssessmentForm({
         >
           <ArrowLeft className="h-4 w-4" /> Daftar siswa
         </button>
-        <button
-          onClick={() => setShowHistory(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
-        >
-          <History className="h-3.5 w-3.5" />
-          Riwayat
-          {reports.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-              {reports.length}
-            </span>
-          )}
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={handleDuplicatePrev}
+            disabled={!previousReport}
+            title={
+              previousReport
+                ? `Salin dari ${formatISODateID(previousReport.reportDate)}`
+                : "Belum ada laporan sebelumnya"
+            }
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Duplikat
+          </button>
+          <button
+            onClick={() => setShowNarrativeEditor(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            <PencilLine className="h-3.5 w-3.5" />
+            Narasi
+          </button>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            <History className="h-3.5 w-3.5" />
+            Riwayat
+            {reports.length > 0 && (
+              <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                {reports.length}
+              </span>
+            )}
+          </button>
+        </div>
+
       </div>
 
       <div className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border sm:p-6">
