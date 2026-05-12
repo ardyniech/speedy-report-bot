@@ -26,7 +26,7 @@ import {
   useReports,
   type SavedReport,
 } from "@/lib/drafts";
-import { useNarratives, type NarrativeMap } from "@/lib/narratives";
+import { useNarratives, getNarrative, type NarrativeMap } from "@/lib/narratives";
 import { toast } from "sonner";
 import {
   AlertDialog,
