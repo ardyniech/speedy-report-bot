@@ -708,50 +708,56 @@ function HistoryPanel({
             )}
           </div>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto p-3">
-          {reports.length === 0 ? (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              Belum ada laporan tersimpan untuk siswa ini.
+        <Tabs defaultValue="date" className="px-3 pt-2">
+          <TabsList className="w-full">
+            <TabsTrigger value="date" className="flex-1">Per Tanggal</TabsTrigger>
+            <TabsTrigger value="aspek" className="flex-1">Per Aspek</TabsTrigger>
+          </TabsList>
+          <TabsContent value="date" className="mt-2">
+            <div className="max-h-[55vh] overflow-y-auto pb-3">
+              {reports.length === 0 ? (
+                <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  Belum ada laporan tersimpan untuk siswa ini.
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  Tidak ada laporan cocok dengan filter.
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {filtered.map(({ r, dateStr, time }) => (
+                    <li key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
+                        <div className="text-xs text-muted-foreground">Disimpan pukul {time}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          onClick={() => onPreview(r)}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Preview
+                        </button>
+                        <button
+                          onClick={() => { if (confirm("Hapus laporan ini?")) onRemove(r.id); }}
+                          className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
+                          aria-label="Hapus"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              Tidak ada laporan cocok dengan "{query}".
+          </TabsContent>
+          <TabsContent value="aspek" className="mt-2">
+            <div className="max-h-[55vh] overflow-y-auto pb-3">
+              <AspectHistoryView reports={filtered.map((x) => x.r)} />
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {filtered.map(({ r, dateStr, time }) => (
-                <li
-                  key={r.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Disimpan pukul {time}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      onClick={() => onPreview(r)}
-                      className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Preview
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Hapus laporan ini?")) onRemove(r.id);
-                      }}
-                      className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
-                      aria-label="Hapus"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
