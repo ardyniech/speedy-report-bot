@@ -492,6 +492,20 @@ export function AssessmentForm({
         />
       )}
 
+      <NarrativeEditorDialog
+        open={showNarrativeEditor}
+        onOpenChange={setShowNarrativeEditor}
+        value={narratives.map}
+        onSave={(next) => {
+          narratives.update(next);
+          toast.success("Template narasi disimpan");
+        }}
+        onReset={() => {
+          narratives.reset();
+          toast.message("Template narasi dikembalikan ke bawaan");
+        }}
+      />
+
       <AlertDialog open={pendingAction !== null} onOpenChange={(o) => !o && setPendingAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
