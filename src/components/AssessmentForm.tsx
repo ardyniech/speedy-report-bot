@@ -108,7 +108,7 @@ export function AssessmentForm({
   const guardComplete = (): boolean => {
     if (!complete) {
       toast.error("Belum lengkap", {
-        description: "Setiap indikator wajib bernilai 1–10 sebelum disimpan atau dikirim.",
+        description: "Setiap indikator wajib bernilai 1–4 sebelum disimpan atau dikirim.",
       });
       return false;
     }
@@ -187,7 +187,7 @@ export function AssessmentForm({
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">{student.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–10 (BB/MB/BSH/BSB)
+          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–4 (BB/MB/BSH/BSB)
         </p>
 
         {/* Date picker */}
@@ -209,8 +209,8 @@ export function AssessmentForm({
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
           {CATEGORY_BANDS.map((b) => (
             <div key={b.code} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
-              <span className="grid h-5 min-w-[2.25rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
-                {b.min}–{b.max}
+              <span className="grid h-5 min-w-[1.5rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                {b.min}
               </span>
               <span className="font-semibold text-foreground">{b.code}</span>
               <span className="truncate text-muted-foreground">{b.label}</span>
@@ -248,25 +248,22 @@ export function AssessmentForm({
                     {/* Bulk set per band */}
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
                       <span className="text-muted-foreground">Set semua:</span>
-                      {CATEGORY_BANDS.map((b) => {
-                        const mid = Math.round((b.min + b.max) / 2) as Score;
-                        return (
-                          <button
-                            key={b.code}
-                            onClick={() => setAllInElement(el.key, mid)}
-                            className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
-                          >
-                            {b.code} ({b.min}–{b.max})
-                          </button>
-                        );
-                      })}
+                      {CATEGORY_BANDS.map((b) => (
+                        <button
+                          key={b.code}
+                          onClick={() => setAllInElement(el.key, b.min as Score)}
+                          className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {b.code} ({b.min})
+                        </button>
+                      ))}
                     </div>
 
                     <ol className="space-y-2">
                       {el.indicators.map((ind, idx) => {
                         const cur = scores[ind.id];
                         const missing =
-                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 10;
+                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 4;
                         return (
                           <li
                             key={ind.id}
@@ -285,7 +282,7 @@ export function AssessmentForm({
                                 </span>
                               )}
                             </div>
-                            <div className="grid grid-cols-5 gap-1 sm:grid-cols-10">
+                            <div className="grid grid-cols-4 gap-1.5">
                               {SCORE_VALUES.map((v) => {
                                 const active = cur === v;
                                 const cat = scoreToCategory(v);
@@ -293,14 +290,14 @@ export function AssessmentForm({
                                   <button
                                     key={v}
                                     onClick={() => setScore(ind.id, v)}
-                                    title={`${v} · ${cat.code}`}
+                                    title={`${v} · ${cat.code} — ${cat.label}`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
                                         : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"
                                     }`}
                                   >
-                                    {v}
+                                    {v} · {cat.code}
                                   </button>
                                 );
                               })}
@@ -319,7 +316,7 @@ export function AssessmentForm({
         {!complete && (
           <div className="mt-4 flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-xs font-medium text-destructive ring-1 ring-destructive/30">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            Lengkapi semua indikator (skor 1–10) sebelum menyimpan atau mengirim ke WhatsApp.
+            Lengkapi semua indikator (skor 1–4) sebelum menyimpan atau mengirim ke WhatsApp.
           </div>
         )}
 

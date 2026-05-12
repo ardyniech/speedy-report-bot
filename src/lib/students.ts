@@ -127,12 +127,12 @@ export const ELEMENTS: Element[] = [
   },
 ];
 
-export type Score = number; // 1..10
+export type Score = 1 | 2 | 3 | 4;
 export type Scores = Record<string, Score>;
 
 export const SCORE_MIN = 1;
-export const SCORE_MAX = 10;
-export const SCORE_VALUES: Score[] = Array.from({ length: 10 }, (_, i) => i + 1);
+export const SCORE_MAX = 4;
+export const SCORE_VALUES: Score[] = [1, 2, 3, 4];
 
 export type CategoryInfo = { code: string; label: string; narrative: string; min: number; max: number };
 
@@ -141,37 +141,37 @@ export const CATEGORY_BANDS: CategoryInfo[] = [
     code: "BB",
     label: "Belum Berkembang",
     min: 1,
-    max: 2,
+    max: 1,
     narrative:
       "Ananda belum menunjukkan ketertarikan atau kemampuan pada aspek ini dan masih membutuhkan bantuan fisik serta pendampingan penuh dari guru selama kegiatan berlangsung.",
   },
   {
     code: "MB",
     label: "Mulai Berkembang",
-    min: 3,
-    max: 4,
+    min: 2,
+    max: 2,
     narrative:
       "Ananda sudah mulai mau mencoba dan berpartisipasi, namun masih sering membutuhkan bimbingan, pengingat, atau instruksi verbal dari guru untuk menyelesaikannya.",
   },
   {
     code: "BSH",
     label: "Berkembang Sesuai Harapan",
-    min: 5,
-    max: 7,
+    min: 3,
+    max: 3,
     narrative:
       "Ananda mampu melakukan aktivitas secara mandiri dengan baik dan konsisten, menunjukkan perkembangan yang pas dan sesuai dengan harapan di usianya.",
   },
   {
     code: "BSB",
     label: "Berkembang Sangat Baik",
-    min: 8,
-    max: 10,
+    min: 4,
+    max: 4,
     narrative:
       "Ananda sangat menguasai aspek ini dengan luar biasa, sangat proaktif, memiliki inisiatif tinggi tanpa perlu diminta, dan bahkan mampu menjadi contoh serta membantu teman-temannya.",
   },
 ];
 
-export function scoreToCategory(s: Score): CategoryInfo {
+export function scoreToCategory(s: number): CategoryInfo {
   const v = Math.max(SCORE_MIN, Math.min(SCORE_MAX, Math.round(s)));
   return CATEGORY_BANDS.find((b) => v >= b.min && v <= b.max) ?? CATEGORY_BANDS[2];
 }
@@ -183,7 +183,7 @@ export const CATEGORIES = new Proxy({} as Record<number, CategoryInfo>, {
 
 export function buildDefaultScores(): Scores {
   const out: Scores = {};
-  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 6)));
+  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 3)));
   return out;
 }
 
@@ -191,7 +191,7 @@ export function summarizeElement(el: Element, scores: Scores) {
   const counts: Record<string, number> = { BB: 0, MB: 0, BSH: 0, BSB: 0 };
   let sum = 0;
   el.indicators.forEach((ind) => {
-    const s = scores[ind.id] ?? 6;
+    const s = scores[ind.id] ?? 3;
     counts[scoreToCategory(s).code]++;
     sum += s;
   });
