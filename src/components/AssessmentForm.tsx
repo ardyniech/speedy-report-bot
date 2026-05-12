@@ -187,7 +187,7 @@ export function AssessmentForm({
         </div>
         <h2 className="font-display text-2xl font-bold text-foreground sm:text-3xl">{student.name}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–10 (BB/MB/BSH/BSB)
+          Kurikulum Merdeka PAUD · {totalIndicators} indikator · skala 1–4 (BB/MB/BSH/BSB)
         </p>
 
         {/* Date picker */}
