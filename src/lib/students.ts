@@ -171,7 +171,7 @@ export const CATEGORY_BANDS: CategoryInfo[] = [
   },
 ];
 
-export function scoreToCategory(s: Score): CategoryInfo {
+export function scoreToCategory(s: number): CategoryInfo {
   const v = Math.max(SCORE_MIN, Math.min(SCORE_MAX, Math.round(s)));
   return CATEGORY_BANDS.find((b) => v >= b.min && v <= b.max) ?? CATEGORY_BANDS[2];
 }
@@ -183,7 +183,7 @@ export const CATEGORIES = new Proxy({} as Record<number, CategoryInfo>, {
 
 export function buildDefaultScores(): Scores {
   const out: Scores = {};
-  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 6)));
+  ELEMENTS.forEach((el) => el.indicators.forEach((ind) => (out[ind.id] = 3)));
   return out;
 }
 
@@ -191,7 +191,7 @@ export function summarizeElement(el: Element, scores: Scores) {
   const counts: Record<string, number> = { BB: 0, MB: 0, BSH: 0, BSB: 0 };
   let sum = 0;
   el.indicators.forEach((ind) => {
-    const s = scores[ind.id] ?? 6;
+    const s = scores[ind.id] ?? 3;
     counts[scoreToCategory(s).code]++;
     sum += s;
   });
