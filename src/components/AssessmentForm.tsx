@@ -99,7 +99,9 @@ export function AssessmentForm({
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showNarrativeEditor, setShowNarrativeEditor] = useState(false);
   const { reports, add: addReport, remove: removeReport } = useReports(student.id);
+  const narratives = useNarratives();
 
   // Auto-save draft on every score change
   useEffect(() => {
@@ -135,6 +137,7 @@ export function AssessmentForm({
   };
 
   const complete = useMemo(() => isScoresComplete(scores), [scores]);
+  const categoryValid = useMemo(() => isScoresCategoryValid(scores), [scores]);
 
   const guardComplete = (): boolean => {
     if (!complete) {
@@ -143,8 +146,32 @@ export function AssessmentForm({
       });
       return false;
     }
+    if (!categoryValid) {
+      toast.error("Kategori tidak valid", {
+        description: "Skor 1=BB, 2=MB, 3=BSH, 4=BSB. Pastikan setiap pilihan sesuai label kategori.",
+      });
+      return false;
+    }
     return true;
   };
+
+  // Duplicate scores from the most recent prior saved report
+  const previousReport = useMemo(() => {
+    const sorted = [...reports].sort((a, b) => b.reportDate.localeCompare(a.reportDate));
+    return sorted.find((r) => r.reportDate < reportDate) ?? sorted[0] ?? null;
+  }, [reports, reportDate]);
+
+  const handleDuplicatePrev = () => {
+    if (!previousReport) {
+      toast.error("Tidak ada laporan sebelumnya untuk siswa ini.");
+      return;
+    }
+    setScores({ ...previousReport.scores });
+    toast.success("Nilai disalin", {
+      description: `Dari laporan ${formatISODateID(previousReport.reportDate)}. Sesuaikan bila perlu.`,
+    });
+  };
+
 
   // Overwrite confirmation state
   const [pendingAction, setPendingAction] = useState<null | "save" | "submit">(null);
