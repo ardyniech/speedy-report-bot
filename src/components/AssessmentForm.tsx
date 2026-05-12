@@ -209,8 +209,8 @@ export function AssessmentForm({
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
           {CATEGORY_BANDS.map((b) => (
             <div key={b.code} className="flex items-center gap-1.5 rounded-md bg-muted/50 px-2 py-1">
-              <span className="grid h-5 min-w-[2.25rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
-                {b.min}–{b.max}
+              <span className="grid h-5 min-w-[1.5rem] place-items-center rounded bg-primary/15 px-1 text-[10px] font-bold text-primary">
+                {b.min}
               </span>
               <span className="font-semibold text-foreground">{b.code}</span>
               <span className="truncate text-muted-foreground">{b.label}</span>
