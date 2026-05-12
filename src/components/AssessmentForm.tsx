@@ -909,7 +909,7 @@ function AspectTimeline({ element, reports }: { element: ElementDef; reports: Sa
               </span>
             </div>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {sum.dominant.narrative}
+              {getNarrative(sum.dominant.code)}
             </p>
           </li>
         );
