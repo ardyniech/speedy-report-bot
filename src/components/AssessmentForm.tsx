@@ -766,3 +766,154 @@ function HistoryPanel({
 
 // keep import used to avoid TS noUnusedLocals if helper unused
 void formatDateID;
+
+function NarrativeEditorDialog({
+  open,
+  onOpenChange,
+  value,
+  onSave,
+  onReset,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  value: NarrativeMap;
+  onSave: (next: NarrativeMap) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<NarrativeMap>(value);
+  useEffect(() => {
+    if (open) setDraft(value);
+  }, [open, value]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PencilLine className="h-4 w-4" /> Template Narasi Evaluasi
+          </DialogTitle>
+          <DialogDescription>
+            Sesuaikan teks narasi untuk setiap kategori (BB / MB / BSH / BSB). Perubahan akan dipakai pada PDF dan ringkasan WhatsApp.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {CATEGORY_BANDS.map((b) => (
+            <div key={b.code} className="space-y-1.5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  {b.code}
+                </span>
+                <span>{b.label}</span>
+                <span className="text-xs text-muted-foreground">(skor {b.min})</span>
+              </label>
+              <Textarea
+                value={draft[b.code] ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, [b.code]: e.target.value }))}
+                rows={4}
+                className="text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onReset} className="gap-1.5">
+            <RotateCcw className="h-4 w-4" /> Bawaan
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button
+            onClick={() => {
+              const cleaned: NarrativeMap = { ...draft };
+              for (const b of CATEGORY_BANDS) {
+                if (!cleaned[b.code] || !cleaned[b.code].trim()) cleaned[b.code] = b.narrative;
+              }
+              onSave(cleaned);
+              onOpenChange(false);
+            }}
+          >
+            Simpan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AspectHistoryView({ reports }: { reports: SavedReport[] }) {
+  const sorted = useMemo(
+    () => [...reports].sort((a, b) => a.reportDate.localeCompare(b.reportDate)),
+    [reports],
+  );
+  const [openKey, setOpenKey] = useState<ElementKey>(ELEMENTS[0].key);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+        Belum ada laporan untuk ditampilkan.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 px-1">
+      {ELEMENTS.map((el) => {
+        const open = openKey === el.key;
+        return (
+          <div key={el.key} className="overflow-hidden rounded-xl ring-1 ring-border">
+            <button
+              onClick={() => setOpenKey(open ? ("" as ElementKey) : el.key)}
+              className="flex w-full items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-left"
+            >
+              <div className="text-sm font-semibold text-foreground">{el.label}</div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-180" : ""}`}
+              />
+            </button>
+            {open && <AspectTimeline element={el} reports={sorted} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AspectTimeline({ element, reports }: { element: ElementDef; reports: SavedReport[] }) {
+  const rows = reports.map((r, i) => {
+    const sum = summarizeElement(element, r.scores);
+    const prev = i > 0 ? summarizeElement(element, reports[i - 1].scores) : null;
+    const delta = prev ? sum.avg - prev.avg : 0;
+    return { r, sum, delta };
+  });
+  return (
+    <ol className="divide-y divide-border bg-card">
+      {rows.map(({ r, sum, delta }) => {
+        const trend =
+          delta > 0.05 ? "▲" : delta < -0.05 ? "▼" : "•";
+        const trendColor =
+          delta > 0.05
+            ? "text-emerald-600"
+            : delta < -0.05
+              ? "text-destructive"
+              : "text-muted-foreground";
+        return (
+          <li key={r.id} className="space-y-1 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-foreground">{formatISODateID(r.reportDate)}</span>
+              <span className="flex items-center gap-1.5">
+                <span className={`font-bold ${trendColor}`}>{trend}</span>
+                <span className="text-muted-foreground">rata-rata {sum.avg.toFixed(2)}</span>
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                  {sum.dominant.code}
+                </span>
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {sum.dominant.narrative}
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
