@@ -17,8 +17,13 @@ export function loadNarratives(): NarrativeMap {
     const raw = localStorage.getItem(KEY);
     const def = defaultNarratives();
     if (!raw) return def;
-    const parsed = JSON.parse(raw) as Partial<NarrativeMap>;
-    return { ...def, ...parsed };
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const merged: NarrativeMap = { ...def };
+    for (const k of Object.keys(parsed)) {
+      const v = parsed[k];
+      if (typeof v === "string" && v.trim()) merged[k] = v;
+    }
+    return merged;
   } catch {
     return defaultNarratives();
   }
