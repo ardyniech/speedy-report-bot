@@ -14,6 +14,7 @@ import {
   type Scores,
   type Student,
   type ElementKey,
+  type Element as ElementDef,
 } from "@/lib/students";
 import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/report";
 import { useSchool } from "@/lib/school";
@@ -25,6 +26,7 @@ import {
   useReports,
   type SavedReport,
 } from "@/lib/drafts";
+import { useNarratives, type NarrativeMap } from "@/lib/narratives";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -36,6 +38,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   FileDown,
@@ -49,7 +61,26 @@ import {
   Calendar as CalendarIcon,
   Search,
   AlertCircle,
+  PencilLine,
+  Copy,
+  RotateCcw,
 } from "lucide-react";
+
+const VALID_BAND_CODES = new Set(CATEGORY_BANDS.map((b) => b.code));
+
+function isScoresCategoryValid(scores: Scores): boolean {
+  for (const el of ELEMENTS) {
+    for (const ind of el.indicators) {
+      const v = scores[ind.id];
+      if (typeof v !== "number") return false;
+      const cat = scoreToCategory(v);
+      if (!VALID_BAND_CODES.has(cat.code)) return false;
+      if (cat.min !== v || cat.max !== v) return false;
+    }
+  }
+  return true;
+}
+
 
 export function AssessmentForm({
   student,
