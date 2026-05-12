@@ -111,7 +111,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(9);
-  doc.text("Skala 1–10  •  1–2 BB (Belum Berkembang)  •  3–4 MB (Mulai Berkembang)  •  5–7 BSH (Sesuai Harapan)  •  8–10 BSB (Sangat Baik)", M, y);
+  doc.text("Skala 1–4  •  1 BB (Belum Berkembang)  •  2 MB (Mulai Berkembang)  •  3 BSH (Sesuai Harapan)  •  4 BSB (Sangat Baik)", M, y);
   y += 14;
 
   // === ELEMENTS ===
