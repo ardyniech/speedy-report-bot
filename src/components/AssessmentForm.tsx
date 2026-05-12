@@ -248,18 +248,15 @@ export function AssessmentForm({
                     {/* Bulk set per band */}
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
                       <span className="text-muted-foreground">Set semua:</span>
-                      {CATEGORY_BANDS.map((b) => {
-                        const mid = Math.round((b.min + b.max) / 2) as Score;
-                        return (
-                          <button
-                            key={b.code}
-                            onClick={() => setAllInElement(el.key, mid)}
-                            className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
-                          >
-                            {b.code} ({b.min}–{b.max})
-                          </button>
-                        );
-                      })}
+                      {CATEGORY_BANDS.map((b) => (
+                        <button
+                          key={b.code}
+                          onClick={() => setAllInElement(el.key, b.min as Score)}
+                          className="rounded-md bg-card px-2 py-1 font-semibold ring-1 ring-border hover:bg-primary hover:text-primary-foreground"
+                        >
+                          {b.code} ({b.min})
+                        </button>
+                      ))}
                     </div>
 
                     <ol className="space-y-2">
