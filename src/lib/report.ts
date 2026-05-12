@@ -137,7 +137,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
 
     doc.setFont("helvetica", "normal");
     el.indicators.forEach((ind, i) => {
-      const score = scores[ind.id] ?? 6;
+      const score = scores[ind.id] ?? 3;
       const cat = scoreToCategory(score);
       const labelLines = doc.splitTextToSize(ind.label, W - 2 * M - 90) as string[];
       const rowH = Math.max(14, labelLines.length * 10 + 4);
