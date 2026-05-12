@@ -14,6 +14,7 @@ import {
   type Scores,
   type Student,
   type ElementKey,
+  type Element as ElementDef,
 } from "@/lib/students";
 import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/report";
 import { useSchool } from "@/lib/school";
@@ -25,6 +26,7 @@ import {
   useReports,
   type SavedReport,
 } from "@/lib/drafts";
+import { useNarratives, getNarrative, type NarrativeMap } from "@/lib/narratives";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -36,6 +38,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   ArrowLeft,
   FileDown,
@@ -49,7 +62,26 @@ import {
   Calendar as CalendarIcon,
   Search,
   AlertCircle,
+  PencilLine,
+  Copy,
+  RotateCcw,
 } from "lucide-react";
+
+const VALID_BAND_CODES = new Set(CATEGORY_BANDS.map((b) => b.code));
+
+function isScoresCategoryValid(scores: Scores): boolean {
+  for (const el of ELEMENTS) {
+    for (const ind of el.indicators) {
+      const v = scores[ind.id];
+      if (typeof v !== "number") return false;
+      const cat = scoreToCategory(v);
+      if (!VALID_BAND_CODES.has(cat.code)) return false;
+      if (cat.min !== v || cat.max !== v) return false;
+    }
+  }
+  return true;
+}
+
 
 export function AssessmentForm({
   student,
@@ -68,7 +100,9 @@ export function AssessmentForm({
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [showNarrativeEditor, setShowNarrativeEditor] = useState(false);
   const { reports, add: addReport, remove: removeReport } = useReports(student.id);
+  const narratives = useNarratives();
 
   // Auto-save draft on every score change
   useEffect(() => {
@@ -104,6 +138,7 @@ export function AssessmentForm({
   };
 
   const complete = useMemo(() => isScoresComplete(scores), [scores]);
+  const categoryValid = useMemo(() => isScoresCategoryValid(scores), [scores]);
 
   const guardComplete = (): boolean => {
     if (!complete) {
@@ -112,8 +147,32 @@ export function AssessmentForm({
       });
       return false;
     }
+    if (!categoryValid) {
+      toast.error("Kategori tidak valid", {
+        description: "Skor 1=BB, 2=MB, 3=BSH, 4=BSB. Pastikan setiap pilihan sesuai label kategori.",
+      });
+      return false;
+    }
     return true;
   };
+
+  // Duplicate scores from the most recent prior saved report
+  const previousReport = useMemo(() => {
+    const sorted = [...reports].sort((a, b) => b.reportDate.localeCompare(a.reportDate));
+    return sorted.find((r) => r.reportDate < reportDate) ?? sorted[0] ?? null;
+  }, [reports, reportDate]);
+
+  const handleDuplicatePrev = () => {
+    if (!previousReport) {
+      toast.error("Tidak ada laporan sebelumnya untuk siswa ini.");
+      return;
+    }
+    setScores({ ...previousReport.scores });
+    toast.success("Nilai disalin", {
+      description: `Dari laporan ${formatISODateID(previousReport.reportDate)}. Sesuaikan bila perlu.`,
+    });
+  };
+
 
   // Overwrite confirmation state
   const [pendingAction, setPendingAction] = useState<null | "save" | "submit">(null);
@@ -167,18 +226,41 @@ export function AssessmentForm({
         >
           <ArrowLeft className="h-4 w-4" /> Daftar siswa
         </button>
-        <button
-          onClick={() => setShowHistory(true)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
-        >
-          <History className="h-3.5 w-3.5" />
-          Riwayat
-          {reports.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-              {reports.length}
-            </span>
-          )}
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            onClick={handleDuplicatePrev}
+            disabled={!previousReport}
+            title={
+              previousReport
+                ? `Salin dari ${formatISODateID(previousReport.reportDate)}`
+                : "Belum ada laporan sebelumnya"
+            }
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Duplikat
+          </button>
+          <button
+            onClick={() => setShowNarrativeEditor(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            <PencilLine className="h-3.5 w-3.5" />
+            Narasi
+          </button>
+          <button
+            onClick={() => setShowHistory(true)}
+            className="inline-flex items-center gap-1.5 rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            <History className="h-3.5 w-3.5" />
+            Riwayat
+            {reports.length > 0 && (
+              <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
+                {reports.length}
+              </span>
+            )}
+          </button>
+        </div>
+
       </div>
 
       <div className="rounded-2xl bg-card p-5 shadow-sm ring-1 ring-border sm:p-6">
@@ -411,6 +493,20 @@ export function AssessmentForm({
         />
       )}
 
+      <NarrativeEditorDialog
+        open={showNarrativeEditor}
+        onOpenChange={setShowNarrativeEditor}
+        value={narratives.map}
+        onSave={(next) => {
+          narratives.update(next);
+          toast.success("Template narasi disimpan");
+        }}
+        onReset={() => {
+          narratives.reset();
+          toast.message("Template narasi dikembalikan ke bawaan");
+        }}
+      />
+
       <AlertDialog open={pendingAction !== null} onOpenChange={(o) => !o && setPendingAction(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -613,50 +709,56 @@ function HistoryPanel({
             )}
           </div>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto p-3">
-          {reports.length === 0 ? (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              Belum ada laporan tersimpan untuk siswa ini.
+        <Tabs defaultValue="date" className="px-3 pt-2">
+          <TabsList className="w-full">
+            <TabsTrigger value="date" className="flex-1">Per Tanggal</TabsTrigger>
+            <TabsTrigger value="aspek" className="flex-1">Per Aspek</TabsTrigger>
+          </TabsList>
+          <TabsContent value="date" className="mt-2">
+            <div className="max-h-[55vh] overflow-y-auto pb-3">
+              {reports.length === 0 ? (
+                <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  Belum ada laporan tersimpan untuk siswa ini.
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+                  Tidak ada laporan cocok dengan filter.
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {filtered.map(({ r, dateStr, time }) => (
+                    <li key={r.id} className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
+                        <div className="text-xs text-muted-foreground">Disimpan pukul {time}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                          onClick={() => onPreview(r)}
+                          className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Preview
+                        </button>
+                        <button
+                          onClick={() => { if (confirm("Hapus laporan ini?")) onRemove(r.id); }}
+                          className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
+                          aria-label="Hapus"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          ) : filtered.length === 0 ? (
-            <div className="px-3 py-10 text-center text-sm text-muted-foreground">
-              Tidak ada laporan cocok dengan "{query}".
+          </TabsContent>
+          <TabsContent value="aspek" className="mt-2">
+            <div className="max-h-[55vh] overflow-y-auto pb-3">
+              <AspectHistoryView reports={filtered.map((x) => x.r)} />
             </div>
-          ) : (
-            <ul className="space-y-2">
-              {filtered.map(({ r, dateStr, time }) => (
-                <li
-                  key={r.id}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-muted/40 p-3 ring-1 ring-border"
-                >
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-foreground">{dateStr}</div>
-                    <div className="text-xs text-muted-foreground">
-                      Disimpan pukul {time}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <button
-                      onClick={() => onPreview(r)}
-                      className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
-                    >
-                      <Eye className="h-3.5 w-3.5" /> Preview
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm("Hapus laporan ini?")) onRemove(r.id);
-                      }}
-                      className="grid h-8 w-8 place-items-center rounded-md bg-card text-muted-foreground ring-1 ring-border hover:text-destructive"
-                      aria-label="Hapus"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
@@ -664,3 +766,154 @@ function HistoryPanel({
 
 // keep import used to avoid TS noUnusedLocals if helper unused
 void formatDateID;
+
+function NarrativeEditorDialog({
+  open,
+  onOpenChange,
+  value,
+  onSave,
+  onReset,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  value: NarrativeMap;
+  onSave: (next: NarrativeMap) => void;
+  onReset: () => void;
+}) {
+  const [draft, setDraft] = useState<NarrativeMap>(value);
+  useEffect(() => {
+    if (open) setDraft(value);
+  }, [open, value]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <PencilLine className="h-4 w-4" /> Template Narasi Evaluasi
+          </DialogTitle>
+          <DialogDescription>
+            Sesuaikan teks narasi untuk setiap kategori (BB / MB / BSH / BSB). Perubahan akan dipakai pada PDF dan ringkasan WhatsApp.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          {CATEGORY_BANDS.map((b) => (
+            <div key={b.code} className="space-y-1.5">
+              <label className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <span className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary">
+                  {b.code}
+                </span>
+                <span>{b.label}</span>
+                <span className="text-xs text-muted-foreground">(skor {b.min})</span>
+              </label>
+              <Textarea
+                value={draft[b.code] ?? ""}
+                onChange={(e) => setDraft((d) => ({ ...d, [b.code]: e.target.value }))}
+                rows={4}
+                className="text-sm"
+              />
+            </div>
+          ))}
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onReset} className="gap-1.5">
+            <RotateCcw className="h-4 w-4" /> Bawaan
+          </Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Batal
+          </Button>
+          <Button
+            onClick={() => {
+              const cleaned: NarrativeMap = { ...draft };
+              for (const b of CATEGORY_BANDS) {
+                if (!cleaned[b.code] || !cleaned[b.code].trim()) cleaned[b.code] = b.narrative;
+              }
+              onSave(cleaned);
+              onOpenChange(false);
+            }}
+          >
+            Simpan
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AspectHistoryView({ reports }: { reports: SavedReport[] }) {
+  const sorted = useMemo(
+    () => [...reports].sort((a, b) => a.reportDate.localeCompare(b.reportDate)),
+    [reports],
+  );
+  const [openKey, setOpenKey] = useState<ElementKey>(ELEMENTS[0].key);
+
+  if (sorted.length === 0) {
+    return (
+      <div className="px-3 py-10 text-center text-sm text-muted-foreground">
+        Belum ada laporan untuk ditampilkan.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3 px-1">
+      {ELEMENTS.map((el) => {
+        const open = openKey === el.key;
+        return (
+          <div key={el.key} className="overflow-hidden rounded-xl ring-1 ring-border">
+            <button
+              onClick={() => setOpenKey(open ? ("" as ElementKey) : el.key)}
+              className="flex w-full items-center justify-between gap-3 bg-muted/40 px-3 py-2 text-left"
+            >
+              <div className="text-sm font-semibold text-foreground">{el.label}</div>
+              <ChevronDown
+                className={`h-4 w-4 text-muted-foreground transition ${open ? "rotate-180" : ""}`}
+              />
+            </button>
+            {open && <AspectTimeline element={el} reports={sorted} />}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AspectTimeline({ element, reports }: { element: ElementDef; reports: SavedReport[] }) {
+  const rows = reports.map((r, i) => {
+    const sum = summarizeElement(element, r.scores);
+    const prev = i > 0 ? summarizeElement(element, reports[i - 1].scores) : null;
+    const delta = prev ? sum.avg - prev.avg : 0;
+    return { r, sum, delta };
+  });
+  return (
+    <ol className="divide-y divide-border bg-card">
+      {rows.map(({ r, sum, delta }) => {
+        const trend =
+          delta > 0.05 ? "▲" : delta < -0.05 ? "▼" : "•";
+        const trendColor =
+          delta > 0.05
+            ? "text-emerald-600"
+            : delta < -0.05
+              ? "text-destructive"
+              : "text-muted-foreground";
+        return (
+          <li key={r.id} className="space-y-1 px-3 py-2">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="font-semibold text-foreground">{formatISODateID(r.reportDate)}</span>
+              <span className="flex items-center gap-1.5">
+                <span className={`font-bold ${trendColor}`}>{trend}</span>
+                <span className="text-muted-foreground">rata-rata {sum.avg.toFixed(2)}</span>
+                <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] font-bold text-primary">
+                  {sum.dominant.code}
+                </span>
+              </span>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              {getNarrative(sum.dominant.code)}
+            </p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
