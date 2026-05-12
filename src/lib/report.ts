@@ -10,6 +10,7 @@ import {
   type Student,
 } from "./students";
 import type { SchoolSettings } from "./school";
+import { getNarrative } from "./narratives";
 
 export { scoreToCategory };
 
