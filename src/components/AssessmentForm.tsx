@@ -263,7 +263,7 @@ export function AssessmentForm({
                       {el.indicators.map((ind, idx) => {
                         const cur = scores[ind.id];
                         const missing =
-                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 10;
+                          typeof cur !== "number" || !Number.isInteger(cur) || cur < 1 || cur > 4;
                         return (
                           <li
                             key={ind.id}
@@ -282,7 +282,7 @@ export function AssessmentForm({
                                 </span>
                               )}
                             </div>
-                            <div className="grid grid-cols-5 gap-1 sm:grid-cols-10">
+                            <div className="grid grid-cols-4 gap-1.5">
                               {SCORE_VALUES.map((v) => {
                                 const active = cur === v;
                                 const cat = scoreToCategory(v);
@@ -290,14 +290,14 @@ export function AssessmentForm({
                                   <button
                                     key={v}
                                     onClick={() => setScore(ind.id, v)}
-                                    title={`${v} · ${cat.code}`}
+                                    title={`${v} · ${cat.code} — ${cat.label}`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
                                         : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"
                                     }`}
                                   >
-                                    {v}
+                                    {v} · {cat.code}
                                   </button>
                                 );
                               })}
