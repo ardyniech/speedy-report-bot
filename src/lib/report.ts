@@ -163,7 +163,7 @@ function buildPdf(student: Student, scores: Scores, school: SchoolSettings, repo
   doc.setFontSize(9.5);
   ELEMENTS.forEach((el) => {
     const sum = summarizeElement(el, scores);
-    const text = `• ${el.short}: ${sum.dominant.narrative}`;
+    const text = `• ${el.short}: ${getNarrative(sum.dominant.code)}`;
     const lines = doc.splitTextToSize(text, W - 2 * M) as string[];
     ensureSpace(lines.length * 12 + 6);
     doc.text(lines, M, y);
