@@ -129,9 +129,12 @@ function Index() {
         {active ? (
           <AssessmentForm
             student={active}
-            onBack={() => setActive(null)}
-            onDone={(s) => {
-              setDoneIds((d) => new Set(d).add(s.id));
+            onBack={() => {
+              setStorageTick((t) => t + 1);
+              setActive(null);
+            }}
+            onDone={(_s) => {
+              setStorageTick((t) => t + 1);
               setActive(null);
             }}
           />
