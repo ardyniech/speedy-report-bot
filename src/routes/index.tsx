@@ -13,7 +13,7 @@ import {
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { SchoolSettingsDialog } from "@/components/SchoolSettingsDialog";
 import { useSchool } from "@/lib/school";
-import { listReports } from "@/lib/drafts";
+import { listReports, hasDraft } from "@/lib/drafts";
 import { generatePdf, buildWaLink } from "@/lib/report";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
