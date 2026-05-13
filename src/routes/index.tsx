@@ -216,6 +216,7 @@ function Index() {
             <div className="grid gap-2 sm:grid-cols-2">
               {filtered.map((s) => {
                 const done = doneIds.has(s.id);
+                const draft = !done && (typeof window !== "undefined") && hasDraft(s.id);
                 return (
                   <button
                     key={s.id}
@@ -225,7 +226,11 @@ function Index() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ${
-                          done ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"
+                          done
+                            ? "bg-emerald-100 text-emerald-700"
+                            : draft
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-primary/10 text-primary"
                         }`}
                       >
                         {done ? <Check className="h-5 w-5" /> : s.name.charAt(0)}
@@ -233,7 +238,9 @@ function Index() {
                       <div>
                         <div className="font-semibold text-foreground">{s.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {s.className} · {s.day} {done && "• Selesai"}
+                          {s.className} · {s.day}
+                          {done && " • Selesai"}
+                          {draft && " • Draft tersimpan"}
                         </div>
                       </div>
                     </div>
