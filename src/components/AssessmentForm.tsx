@@ -158,6 +158,60 @@ export function AssessmentForm({
     });
   };
 
+  // ---- Keyboard mode kilat: 1-4 = set + lanjut, Enter = lanjut ----
+  const flat = useMemo(
+    () =>
+      ELEMENTS.flatMap((el) =>
+        el.indicators.map((i) => ({ elKey: el.key, id: i.id })),
+      ),
+    [],
+  );
+  const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
+  const focusIndicator = (id: string) => {
+    setFocusedId(id);
+    const el = itemRefs.current[id];
+    if (el) {
+      const elKey = flat.find((f) => f.id === id)?.elKey;
+      if (elKey && elKey !== openEl) setOpenEl(elKey);
+      requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+    }
+  };
+
+  const advance = (currentId: string | null) => {
+    const idx = currentId ? flat.findIndex((f) => f.id === currentId) : -1;
+    const next = flat[idx + 1];
+    if (next) focusIndicator(next.id);
+    else toast.success("Semua indikator sudah diisi", { description: "Cek ulang lalu Simpan / Kirim." });
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // jangan ganggu pengetikan di input/textarea/contentEditable
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (!focusedId) return;
+      if (e.key >= "1" && e.key <= "4") {
+        e.preventDefault();
+        const v = Number(e.key) as Score;
+        setScore(focusedId, v);
+        advance(focusedId);
+      } else if (e.key === "Enter" || e.key === "ArrowDown") {
+        e.preventDefault();
+        advance(focusedId);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const idx = flat.findIndex((f) => f.id === focusedId);
+        const prev = flat[idx - 1];
+        if (prev) focusIndicator(prev.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedId, flat]);
+
   const complete = useMemo(() => isScoresComplete(scores), [scores]);
   const categoryValid = useMemo(() => isScoresCategoryValid(scores), [scores]);
 
