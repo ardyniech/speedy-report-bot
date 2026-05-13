@@ -104,10 +104,10 @@ export function AssessmentForm({
   const { reports, add: addReport, remove: removeReport } = useReports(student.id);
   const narratives = useNarratives();
 
-  // Auto-save draft on every score change
-  useEffect(() => {
-    saveDraft(student.id, scores);
-  }, [student.id, scores]);
+  // Auto-save draft (debounced + flushed on tab hide/close, cross-tab synced)
+  const autosave = useAutoSaveDraft(student.id, scores, {
+    onExternalChange: (next) => setScores(next),
+  });
 
   // Notify once if a draft was loaded
   useEffect(() => {
