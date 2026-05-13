@@ -148,8 +148,26 @@ function Index() {
                 Selamat mengajar, Bu Guru!
               </h2>
               <p className="mt-1 text-sm opacity-90">
-                {doneCount} dari {filtered.length} siswa sudah dinilai.
+                {doneCount} dari {filtered.length} siswa sudah dinilai untuk{" "}
+                <span className="font-semibold">{formatISODateID(progressDate)}</span>.
               </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={progressDate}
+                  max={todayISO()}
+                  onChange={(e) => setProgressDate(e.target.value || todayISO())}
+                  className="rounded-md bg-white/15 px-2 py-1 text-xs text-white ring-1 ring-white/30 focus:outline-none [color-scheme:dark]"
+                />
+                {progressDate !== todayISO() && (
+                  <button
+                    onClick={() => setProgressDate(todayISO())}
+                    className="rounded-md bg-white/15 px-2 py-1 text-xs font-medium text-white ring-1 ring-white/30 hover:bg-white/25"
+                  >
+                    Hari ini
+                  </button>
+                )}
+              </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
                 <div
                   className="h-full bg-white transition-all"
