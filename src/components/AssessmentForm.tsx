@@ -93,15 +93,23 @@ export function AssessmentForm({
   onDone: (s: Student) => void;
 }) {
   const school = useSchool();
-  const [scores, setScores] = useState<Scores>(
-    () => loadDraft(student.id) ?? buildDefaultScores(),
-  );
+  const { reports, add: addReport, remove: removeReport } = useReports(student.id);
+
+  // Mode kilat: prefer draft → laporan terakhir siswa ini → default BSH
+  const [scores, setScores] = useState<Scores>(() => {
+    const draft = loadDraft(student.id);
+    if (draft) return draft;
+    // initial reports list (sync) from storage
+    const recent = (typeof window !== "undefined" ? reports[0] : null) ?? null;
+    if (recent) return { ...recent.scores };
+    return buildDefaultScores();
+  });
+  const [recallNotified, setRecallNotified] = useState(false);
   const [reportDate, setReportDate] = useState<string>(() => todayISO());
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showNarrativeEditor, setShowNarrativeEditor] = useState(false);
-  const { reports, add: addReport, remove: removeReport } = useReports(student.id);
   const narratives = useNarratives();
 
   // Auto-save draft (debounced + flushed on tab hide/close, cross-tab synced)
