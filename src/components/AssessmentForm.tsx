@@ -362,6 +362,38 @@ export function AssessmentForm({
           <span className="text-xs text-muted-foreground">{formatISODateID(reportDate)}</span>
         </label>
 
+        {/* Mode kilat */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Mode Kilat
+          </span>
+          <button
+            onClick={() => {
+              setAllScores(3 as Score);
+              setOpenEl(ELEMENTS[0].key);
+              if (flat[0]) focusIndicator(flat[0].id);
+              toast.success("Semua diisi BSH", { description: "Tinggal koreksi yang menonjol — pakai 1–4 + Enter." });
+            }}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+          >
+            Mulai dari BSH (semua 3)
+          </button>
+          <button
+            onClick={() => {
+              if (flat[0]) focusIndicator(flat[0].id);
+              toast.message("Mode kilat aktif", {
+                description: "Tekan 1·BB / 2·MB / 3·BSH / 4·BSB lalu Enter untuk lanjut.",
+              });
+            }}
+            className="rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            Mulai input keyboard
+          </button>
+          <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">
+            Pintasan: 1·2·3·4 set skor • Enter / ↓ lanjut • ↑ kembali
+          </span>
+        </div>
+
         {/* Legend (band) */}
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
           {CATEGORY_BANDS.map((b) => (
