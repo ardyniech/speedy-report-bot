@@ -41,10 +41,12 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [active, setActive] = useState<Student | null>(null);
-  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [classFilter, setClassFilter] = useState<string>("all");
   const [dayFilter, setDayFilter] = useState<WeekDay | "all">("all");
   const [todayLabel, setTodayLabel] = useState<string>("");
+  const [progressDate, setProgressDate] = useState<string>(() => todayISO());
+  // Tick ulang saat draft di tab/komponen lain berubah agar progress fresh.
+  const [storageTick, setStorageTick] = useState(0);
   const school = useSchool();
 
   // Hindari hydration mismatch: render tanggal hanya di client.
@@ -52,6 +54,23 @@ function Index() {
     setTodayLabel(formatDateID(new Date()));
     const td = todayWeekDay();
     if (td) setDayFilter(td);
+  }, []);
+
+  // Re-hitung doneIds setiap kali kembali ke daftar (active null) atau localStorage berubah.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith("reports:") || e.key.startsWith("draft:")) {
+        setStorageTick((t) => t + 1);
+      }
+    };
+    const onFocus = () => setStorageTick((t) => t + 1);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const classes = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.className))), []);
@@ -64,6 +83,18 @@ function Index() {
       ),
     [classFilter, dayFilter],
   );
+
+  // Sumber kebenaran progress = laporan tersimpan untuk tanggal yg dipilih.
+  const doneIds = useMemo(() => {
+    if (typeof window === "undefined") return new Set<string>();
+    const ids = new Set<string>();
+    for (const s of STUDENTS) {
+      if (listReports(s.id).some((r) => r.reportDate === progressDate)) ids.add(s.id);
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressDate, storageTick, active]);
+
   const doneCount = filtered.filter((s) => doneIds.has(s.id)).length;
 
   return (
