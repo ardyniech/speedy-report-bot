@@ -65,6 +65,7 @@ import {
   PencilLine,
   Copy,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 
 const VALID_BAND_CODES = new Set(CATEGORY_BANDS.map((b) => b.code));
