@@ -13,7 +13,7 @@ import {
 import { AssessmentForm } from "@/components/AssessmentForm";
 import { SchoolSettingsDialog } from "@/components/SchoolSettingsDialog";
 import { useSchool } from "@/lib/school";
-import { listReports } from "@/lib/drafts";
+import { listReports, hasDraft } from "@/lib/drafts";
 import { generatePdf, buildWaLink } from "@/lib/report";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
@@ -41,10 +41,12 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const [active, setActive] = useState<Student | null>(null);
-  const [doneIds, setDoneIds] = useState<Set<string>>(new Set());
   const [classFilter, setClassFilter] = useState<string>("all");
   const [dayFilter, setDayFilter] = useState<WeekDay | "all">("all");
   const [todayLabel, setTodayLabel] = useState<string>("");
+  const [progressDate, setProgressDate] = useState<string>(() => todayISO());
+  // Tick ulang saat draft di tab/komponen lain berubah agar progress fresh.
+  const [storageTick, setStorageTick] = useState(0);
   const school = useSchool();
 
   // Hindari hydration mismatch: render tanggal hanya di client.
@@ -52,6 +54,23 @@ function Index() {
     setTodayLabel(formatDateID(new Date()));
     const td = todayWeekDay();
     if (td) setDayFilter(td);
+  }, []);
+
+  // Re-hitung doneIds setiap kali kembali ke daftar (active null) atau localStorage berubah.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key.startsWith("reports:") || e.key.startsWith("draft:")) {
+        setStorageTick((t) => t + 1);
+      }
+    };
+    const onFocus = () => setStorageTick((t) => t + 1);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   const classes = useMemo(() => Array.from(new Set(STUDENTS.map((s) => s.className))), []);
@@ -64,6 +83,18 @@ function Index() {
       ),
     [classFilter, dayFilter],
   );
+
+  // Sumber kebenaran progress = laporan tersimpan untuk tanggal yg dipilih.
+  const doneIds = useMemo(() => {
+    if (typeof window === "undefined") return new Set<string>();
+    const ids = new Set<string>();
+    for (const s of STUDENTS) {
+      if (listReports(s.id).some((r) => r.reportDate === progressDate)) ids.add(s.id);
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progressDate, storageTick, active]);
+
   const doneCount = filtered.filter((s) => doneIds.has(s.id)).length;
 
   return (
@@ -98,9 +129,12 @@ function Index() {
         {active ? (
           <AssessmentForm
             student={active}
-            onBack={() => setActive(null)}
-            onDone={(s) => {
-              setDoneIds((d) => new Set(d).add(s.id));
+            onBack={() => {
+              setStorageTick((t) => t + 1);
+              setActive(null);
+            }}
+            onDone={(_s) => {
+              setStorageTick((t) => t + 1);
               setActive(null);
             }}
           />
@@ -114,8 +148,26 @@ function Index() {
                 Selamat mengajar, Bu Guru!
               </h2>
               <p className="mt-1 text-sm opacity-90">
-                {doneCount} dari {filtered.length} siswa sudah dinilai.
+                {doneCount} dari {filtered.length} siswa sudah dinilai untuk{" "}
+                <span className="font-semibold">{formatISODateID(progressDate)}</span>.
               </p>
+              <div className="mt-3 flex items-center gap-2">
+                <input
+                  type="date"
+                  value={progressDate}
+                  max={todayISO()}
+                  onChange={(e) => setProgressDate(e.target.value || todayISO())}
+                  className="rounded-md bg-white/15 px-2 py-1 text-xs text-white ring-1 ring-white/30 focus:outline-none [color-scheme:dark]"
+                />
+                {progressDate !== todayISO() && (
+                  <button
+                    onClick={() => setProgressDate(todayISO())}
+                    className="rounded-md bg-white/15 px-2 py-1 text-xs font-medium text-white ring-1 ring-white/30 hover:bg-white/25"
+                  >
+                    Hari ini
+                  </button>
+                )}
+              </div>
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/20">
                 <div
                   className="h-full bg-white transition-all"
@@ -164,6 +216,7 @@ function Index() {
             <div className="grid gap-2 sm:grid-cols-2">
               {filtered.map((s) => {
                 const done = doneIds.has(s.id);
+                const draft = !done && (typeof window !== "undefined") && hasDraft(s.id);
                 return (
                   <button
                     key={s.id}
@@ -173,7 +226,11 @@ function Index() {
                     <div className="flex items-center gap-3">
                       <div
                         className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ${
-                          done ? "bg-emerald-100 text-emerald-700" : "bg-primary/10 text-primary"
+                          done
+                            ? "bg-emerald-100 text-emerald-700"
+                            : draft
+                              ? "bg-amber-100 text-amber-700"
+                              : "bg-primary/10 text-primary"
                         }`}
                       >
                         {done ? <Check className="h-5 w-5" /> : s.name.charAt(0)}
@@ -181,7 +238,9 @@ function Index() {
                       <div>
                         <div className="font-semibold text-foreground">{s.name}</div>
                         <div className="text-xs text-muted-foreground">
-                          {s.className} · {s.day} {done && "• Selesai"}
+                          {s.className} · {s.day}
+                          {done && " • Selesai"}
+                          {draft && " • Draft tersimpan"}
                         </div>
                       </div>
                     </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ELEMENTS,
   CATEGORY_BANDS,
@@ -65,6 +65,7 @@ import {
   PencilLine,
   Copy,
   RotateCcw,
+  Sparkles,
 } from "lucide-react";
 
 const VALID_BAND_CODES = new Set(CATEGORY_BANDS.map((b) => b.code));
@@ -93,15 +94,23 @@ export function AssessmentForm({
   onDone: (s: Student) => void;
 }) {
   const school = useSchool();
-  const [scores, setScores] = useState<Scores>(
-    () => loadDraft(student.id) ?? buildDefaultScores(),
-  );
+  const { reports, add: addReport, remove: removeReport } = useReports(student.id);
+
+  // Mode kilat: prefer draft → laporan terakhir siswa ini → default BSH
+  const [scores, setScores] = useState<Scores>(() => {
+    const draft = loadDraft(student.id);
+    if (draft) return draft;
+    // initial reports list (sync) from storage
+    const recent = (typeof window !== "undefined" ? reports[0] : null) ?? null;
+    if (recent) return { ...recent.scores };
+    return buildDefaultScores();
+  });
+  const [recallNotified, setRecallNotified] = useState(false);
   const [reportDate, setReportDate] = useState<string>(() => todayISO());
   const [openEl, setOpenEl] = useState<ElementKey>("agama");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showNarrativeEditor, setShowNarrativeEditor] = useState(false);
-  const { reports, add: addReport, remove: removeReport } = useReports(student.id);
   const narratives = useNarratives();
 
   // Auto-save draft (debounced + flushed on tab hide/close, cross-tab synced)
@@ -109,13 +118,26 @@ export function AssessmentForm({
     onExternalChange: (next) => setScores(next),
   });
 
-  // Notify once if a draft was loaded
+  // Notify once if a draft was loaded, atau jika nilai di-recall dari laporan terakhir
   useEffect(() => {
     if (hasDraft(student.id)) {
       toast.message("Draft dimuat", { description: "Lanjutkan pengisian dari terakhir." });
+    } else if (reports[0] && !recallNotified) {
+      setRecallNotified(true);
+      toast.message("Nilai disalin dari laporan terakhir", {
+        description: `Dari ${formatISODateID(reports[0].reportDate)}. Sesuaikan bila perlu.`,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id]);
+
+  const setAllScores = (val: Score) => {
+    setScores(() => {
+      const next: Scores = {};
+      ELEMENTS.forEach((el) => el.indicators.forEach((i) => (next[i.id] = val)));
+      return next;
+    });
+  };
 
   const openPreview = (s: Scores = scores, d: string = reportDate) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -136,6 +158,60 @@ export function AssessmentForm({
       return next;
     });
   };
+
+  // ---- Keyboard mode kilat: 1-4 = set + lanjut, Enter = lanjut ----
+  const flat = useMemo(
+    () =>
+      ELEMENTS.flatMap((el) =>
+        el.indicators.map((i) => ({ elKey: el.key, id: i.id })),
+      ),
+    [],
+  );
+  const itemRefs = useRef<Record<string, HTMLLIElement | null>>({});
+  const [focusedId, setFocusedId] = useState<string | null>(null);
+
+  const focusIndicator = (id: string) => {
+    setFocusedId(id);
+    const el = itemRefs.current[id];
+    if (el) {
+      const elKey = flat.find((f) => f.id === id)?.elKey;
+      if (elKey && elKey !== openEl) setOpenEl(elKey);
+      requestAnimationFrame(() => el.scrollIntoView({ behavior: "smooth", block: "center" }));
+    }
+  };
+
+  const advance = (currentId: string | null) => {
+    const idx = currentId ? flat.findIndex((f) => f.id === currentId) : -1;
+    const next = flat[idx + 1];
+    if (next) focusIndicator(next.id);
+    else toast.success("Semua indikator sudah diisi", { description: "Cek ulang lalu Simpan / Kirim." });
+  };
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // jangan ganggu pengetikan di input/textarea/contentEditable
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (!focusedId) return;
+      if (e.key >= "1" && e.key <= "4") {
+        e.preventDefault();
+        const v = Number(e.key) as Score;
+        setScore(focusedId, v);
+        advance(focusedId);
+      } else if (e.key === "Enter" || e.key === "ArrowDown") {
+        e.preventDefault();
+        advance(focusedId);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const idx = flat.findIndex((f) => f.id === focusedId);
+        const prev = flat[idx - 1];
+        if (prev) focusIndicator(prev.id);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusedId, flat]);
 
   const complete = useMemo(() => isScoresComplete(scores), [scores]);
   const categoryValid = useMemo(() => isScoresCategoryValid(scores), [scores]);
@@ -287,6 +363,38 @@ export function AssessmentForm({
           <span className="text-xs text-muted-foreground">{formatISODateID(reportDate)}</span>
         </label>
 
+        {/* Mode kilat */}
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-primary/5 p-3 ring-1 ring-primary/20">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-primary">
+            <Sparkles className="h-3.5 w-3.5" /> Mode Kilat
+          </span>
+          <button
+            onClick={() => {
+              setAllScores(3 as Score);
+              setOpenEl(ELEMENTS[0].key);
+              if (flat[0]) focusIndicator(flat[0].id);
+              toast.success("Semua diisi BSH", { description: "Tinggal koreksi yang menonjol — pakai 1–4 + Enter." });
+            }}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:opacity-90"
+          >
+            Mulai dari BSH (semua 3)
+          </button>
+          <button
+            onClick={() => {
+              if (flat[0]) focusIndicator(flat[0].id);
+              toast.message("Mode kilat aktif", {
+                description: "Tekan 1·BB / 2·MB / 3·BSH / 4·BSB lalu Enter untuk lanjut.",
+              });
+            }}
+            className="rounded-md bg-card px-3 py-1.5 text-xs font-semibold text-foreground ring-1 ring-border hover:bg-muted"
+          >
+            Mulai input keyboard
+          </button>
+          <span className="ml-auto hidden text-[10px] text-muted-foreground sm:inline">
+            Pintasan: 1·2·3·4 set skor • Enter / ↓ lanjut • ↑ kembali
+          </span>
+        </div>
+
         {/* Legend (band) */}
         <div className="mt-4 grid grid-cols-2 gap-1.5 text-[11px] sm:grid-cols-4">
           {CATEGORY_BANDS.map((b) => (
@@ -349,8 +457,16 @@ export function AssessmentForm({
                         return (
                           <li
                             key={ind.id}
-                            className={`rounded-lg p-3 ${
-                              missing ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-muted/30"
+                            ref={(node) => { itemRefs.current[ind.id] = node; }}
+                            tabIndex={0}
+                            onFocus={() => setFocusedId(ind.id)}
+                            onClick={() => setFocusedId(ind.id)}
+                            className={`rounded-lg p-3 outline-none transition ${
+                              missing
+                                ? "bg-destructive/10 ring-1 ring-destructive/30"
+                                : focusedId === ind.id
+                                  ? "bg-primary/5 ring-2 ring-primary"
+                                  : "bg-muted/30 ring-1 ring-transparent"
                             }`}
                           >
                             <div className="mb-2 flex items-center justify-between gap-2 text-sm">
@@ -371,8 +487,13 @@ export function AssessmentForm({
                                 return (
                                   <button
                                     key={v}
-                                    onClick={() => setScore(ind.id, v)}
-                                    title={`${v} · ${cat.code} — ${cat.label}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFocusedId(ind.id);
+                                      setScore(ind.id, v);
+                                      advance(ind.id);
+                                    }}
+                                    title={`${v} · ${cat.code} — ${cat.label} (tekan ${v})`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
