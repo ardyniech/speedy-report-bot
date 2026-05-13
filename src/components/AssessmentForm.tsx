@@ -20,9 +20,9 @@ import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/repo
 import { useSchool } from "@/lib/school";
 import {
   loadDraft,
-  saveDraft,
   clearDraft,
   hasDraft,
+  useAutoSaveDraft,
   useReports,
   type SavedReport,
 } from "@/lib/drafts";
