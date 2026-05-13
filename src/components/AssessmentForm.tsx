@@ -20,9 +20,9 @@ import { buildWaLink, generatePdf, previewPdfUrl, pdfFileName } from "@/lib/repo
 import { useSchool } from "@/lib/school";
 import {
   loadDraft,
-  saveDraft,
   clearDraft,
   hasDraft,
+  useAutoSaveDraft,
   useReports,
   type SavedReport,
 } from "@/lib/drafts";
@@ -104,10 +104,10 @@ export function AssessmentForm({
   const { reports, add: addReport, remove: removeReport } = useReports(student.id);
   const narratives = useNarratives();
 
-  // Auto-save draft on every score change
-  useEffect(() => {
-    saveDraft(student.id, scores);
-  }, [student.id, scores]);
+  // Auto-save draft (debounced + flushed on tab hide/close, cross-tab synced)
+  const autosave = useAutoSaveDraft(student.id, scores, {
+    onExternalChange: (next) => setScores(next),
+  });
 
   // Notify once if a draft was loaded
   useEffect(() => {
@@ -438,7 +438,12 @@ export function AssessmentForm({
           </button>
         </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <Save className="h-3 w-3" /> Draft otomatis tersimpan — bisa dilanjutkan kapan saja.
+          <Save className="h-3 w-3" />
+          {autosave.status === "error"
+            ? "Gagal menyimpan draft (storage penuh?)"
+            : autosave.savedAt
+              ? `Draft tersimpan ${new Date(autosave.savedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+              : "Draft otomatis tersimpan — bisa dilanjutkan kapan saja."}
         </p>
       </div>
 
