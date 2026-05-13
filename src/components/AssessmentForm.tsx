@@ -438,7 +438,12 @@ export function AssessmentForm({
           </button>
         </div>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
-          <Save className="h-3 w-3" /> Draft otomatis tersimpan — bisa dilanjutkan kapan saja.
+          <Save className="h-3 w-3" />
+          {autosave.status === "error"
+            ? "Gagal menyimpan draft (storage penuh?)"
+            : autosave.savedAt
+              ? `Draft tersimpan ${new Date(autosave.savedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+              : "Draft otomatis tersimpan — bisa dilanjutkan kapan saja."}
         </p>
       </div>
 
