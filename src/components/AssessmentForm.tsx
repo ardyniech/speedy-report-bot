@@ -117,13 +117,26 @@ export function AssessmentForm({
     onExternalChange: (next) => setScores(next),
   });
 
-  // Notify once if a draft was loaded
+  // Notify once if a draft was loaded, atau jika nilai di-recall dari laporan terakhir
   useEffect(() => {
     if (hasDraft(student.id)) {
       toast.message("Draft dimuat", { description: "Lanjutkan pengisian dari terakhir." });
+    } else if (reports[0] && !recallNotified) {
+      setRecallNotified(true);
+      toast.message("Nilai disalin dari laporan terakhir", {
+        description: `Dari ${formatISODateID(reports[0].reportDate)}. Sesuaikan bila perlu.`,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student.id]);
+
+  const setAllScores = (val: Score) => {
+    setScores(() => {
+      const next: Scores = {};
+      ELEMENTS.forEach((el) => el.indicators.forEach((i) => (next[i.id] = val)));
+      return next;
+    });
+  };
 
   const openPreview = (s: Scores = scores, d: string = reportDate) => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
