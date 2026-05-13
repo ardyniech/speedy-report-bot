@@ -424,8 +424,16 @@ export function AssessmentForm({
                         return (
                           <li
                             key={ind.id}
-                            className={`rounded-lg p-3 ${
-                              missing ? "bg-destructive/10 ring-1 ring-destructive/30" : "bg-muted/30"
+                            ref={(node) => { itemRefs.current[ind.id] = node; }}
+                            tabIndex={0}
+                            onFocus={() => setFocusedId(ind.id)}
+                            onClick={() => setFocusedId(ind.id)}
+                            className={`rounded-lg p-3 outline-none transition ${
+                              missing
+                                ? "bg-destructive/10 ring-1 ring-destructive/30"
+                                : focusedId === ind.id
+                                  ? "bg-primary/5 ring-2 ring-primary"
+                                  : "bg-muted/30 ring-1 ring-transparent"
                             }`}
                           >
                             <div className="mb-2 flex items-center justify-between gap-2 text-sm">
@@ -446,8 +454,13 @@ export function AssessmentForm({
                                 return (
                                   <button
                                     key={v}
-                                    onClick={() => setScore(ind.id, v)}
-                                    title={`${v} · ${cat.code} — ${cat.label}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setFocusedId(ind.id);
+                                      setScore(ind.id, v);
+                                      advance(ind.id);
+                                    }}
+                                    title={`${v} · ${cat.code} — ${cat.label} (tekan ${v})`}
                                     className={`rounded-md py-2 text-xs font-bold transition ${
                                       active
                                         ? "bg-primary text-primary-foreground shadow"
